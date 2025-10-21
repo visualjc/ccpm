@@ -4,6 +4,8 @@ echo ""
 echo ""
 
 echo "📚 Claude Code PM - Project Management System"
+VERSION=$(cat claude-template/VERSION 2>/dev/null || echo "unknown")
+echo "Version: $VERSION"
 echo "============================================="
 echo ""
 echo "🎯 Quick Start Workflow"
