@@ -4,7 +4,14 @@ echo ""
 echo ""
 
 echo "📚 Claude Code PM - Project Management System"
-VERSION=$(cat claude-template/VERSION 2>/dev/null || echo "unknown")
+# Try .claude/VERSION first (installed location), then claude-template/VERSION (dev location)
+if [[ -f ".claude/VERSION" ]]; then
+  VERSION=$(cat .claude/VERSION)
+elif [[ -f "claude-template/VERSION" ]]; then
+  VERSION=$(cat claude-template/VERSION)
+else
+  VERSION="unknown"
+fi
 echo "Version: $VERSION"
 echo "============================================="
 echo ""
