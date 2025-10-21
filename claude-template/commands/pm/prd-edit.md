@@ -15,7 +15,11 @@ Edit an existing Product Requirements Document.
 
 ### 1. Read Current PRD
 
-Read `.claude/prds/$ARGUMENTS.md`:
+Resolve PRD path and read `$PRD_DIR/$ARGUMENTS.md`:
+```bash
+PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh) || echo "❌ No PRD directory. Run /pm:prd-new $ARGUMENTS first" && exit 1
+```
+Read `$PRD_DIR/$ARGUMENTS.md`:
 - Parse frontmatter
 - Read all sections
 
