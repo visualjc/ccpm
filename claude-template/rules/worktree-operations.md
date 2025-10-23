@@ -21,7 +21,7 @@ The worktree will be created as a sibling directory to maintain clean separation
 ### Agent Commits
 - Agents commit directly to the worktree
 - Use small, focused commits
-- Commit message format: `Issue #{number}: {description}`
+- Commit message format: `Issue {number}: {description}`
 - Example: `Issue #1234: Add user authentication schema`
 
 ### File Operations
@@ -31,7 +31,7 @@ cd ../epic-{name}
 
 # Normal git operations work
 git add {files}
-git commit -m "Issue #{number}: {change}"
+git commit -m "Issue {number}: {change}"
 
 # View worktree status
 git status
