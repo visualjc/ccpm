@@ -17,9 +17,10 @@ echo "================================"
 echo ""
 
 # Search in PRDs
-if [ -d ".claude/prds" ]; then
+PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh 2>/dev/null)
+if [ -n "$PRD_DIR" ] && [ -d "$PRD_DIR" ]; then
   echo "📄 PRDs:"
-  results=$(grep -l -i "$query" .claude/prds/*.md 2>/dev/null)
+  results=$(grep -l -i "$query" "$PRD_DIR"/*.md 2>/dev/null)
   if [ -n "$results" ]; then
     for file in $results; do
       name=$(basename "$file" .md)

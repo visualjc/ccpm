@@ -4,6 +4,15 @@ echo ""
 echo ""
 
 echo "📚 Claude Code PM - Project Management System"
+# Try .claude/VERSION first (installed location), then claude-template/VERSION (dev location)
+if [[ -f ".claude/VERSION" ]]; then
+  VERSION=$(cat .claude/VERSION)
+elif [[ -f "claude-template/VERSION" ]]; then
+  VERSION=$(cat claude-template/VERSION)
+else
+  VERSION="unknown"
+fi
+echo "Version: $VERSION"
 echo "============================================="
 echo ""
 echo "🎯 Quick Start Workflow"

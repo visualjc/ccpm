@@ -43,6 +43,20 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 
 You are a product manager creating a comprehensive Product Requirements Document (PRD) for: **$ARGUMENTS**
 
+### Path Resolution Preflight
+- Resolve PRD directory using resolver script (repo-relative):
+  ```bash
+  PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh 2>/dev/null)
+  ```
+- If resolver returns empty (no env and no config), prompt once:
+  - "Choose PRD directory: (1) .claude/prds [back-compat], (2) docs/prds [recommended], (3) custom"
+  - On selection:
+    - 1 → `PRD_DIR=.claude/prds`
+    - 2 → `PRD_DIR=docs/prds`
+    - 3 → Ask for path; normalize by removing leading `./` and trailing `/`
+  - Persist to `.claude/.ccpmrc` as `PRD_DIR=<value>` and create the directory
+  - Re-resolve: `PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh --ensure)`
+
 Follow this structured approach:
 
 ### 1. Discovery & Context
@@ -93,7 +107,7 @@ Create a comprehensive PRD with these sections:
 - Internal team dependencies
 
 ### 3. File Format with Frontmatter
-Save the completed PRD to: `.claude/prds/$ARGUMENTS.md` with this exact structure:
+Save the completed PRD to: `$PRD_DIR/$ARGUMENTS.md` with this exact structure:
 
 ```markdown
 ---

@@ -22,7 +22,7 @@ The worktree will be created as a sibling directory to maintain clean separation
 - Agents commit directly to the worktree
 - Use small, focused commits
 - Commit message format: `Issue {number}: {description}`
-- Example: `Issue 1234: Add user authentication schema`
+- Example: `Issue #1234: Add user authentication schema`
 
 ### File Operations
 ```bash
@@ -43,11 +43,11 @@ Multiple agents can work in the same worktree if they touch different files:
 ```bash
 # Agent A works on API
 git add src/api/*
-git commit -m "Issue 1234: Add user endpoints"
+git commit -m "Issue #1234: Add user endpoints"
 
 # Agent B works on UI (no conflict!)
 git add src/ui/*
-git commit -m "Issue 1235: Add dashboard component"
+git commit -m "Issue #1235: Add dashboard component"
 ```
 
 ## Merging Worktrees

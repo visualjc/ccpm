@@ -27,7 +27,8 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
    - Stop execution if <feature_name> was not provided
 
 2. **Verify PRD exists:**
-   - Check if `.claude/prds/$ARGUMENTS.md` exists
+   - Resolve PRD directory: `PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh)`
+   - Check if `$PRD_DIR/$ARGUMENTS.md` exists
    - If not found, tell user: "❌ PRD not found: $ARGUMENTS. First create it with: /pm:prd-new $ARGUMENTS"
    - Stop execution if PRD doesn't exist
 
@@ -51,7 +52,7 @@ Do not bother the user with preflight checks progress ("I'm not going to ..."). 
 You are a technical lead converting a Product Requirements Document into a detailed implementation epic for: **$ARGUMENTS**
 
 ### 1. Read the PRD
-- Load the PRD from `.claude/prds/$ARGUMENTS.md`
+- Load the PRD from `$PRD_DIR/$ARGUMENTS.md`
 - Analyze all requirements and constraints
 - Understand the user stories and success criteria
 - Extract the PRD description from frontmatter
@@ -71,7 +72,7 @@ name: $ARGUMENTS
 status: backlog
 created: [Current ISO date/time]
 progress: 0%
-prd: .claude/prds/$ARGUMENTS.md
+prd: $PRD_DIR/$ARGUMENTS.md
 github: [Will be updated when synced to GitHub]
 ---
 
