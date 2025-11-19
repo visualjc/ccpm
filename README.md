@@ -171,6 +171,8 @@ Transforms PRD into a technical implementation plan with architectural decisions
 
 **Output:** `.claude/epics/feature-name/epic.md`
 
+> Note on PRD directory: By default PRDs are stored in `.claude/prds`. You can configure a non-hidden directory (e.g., `docs/prds`) via env `CCPM_PRD_DIR` or `.claude/.ccpmrc` (`PRD_DIR=...`). See `docs/ccpm-configuration.md` for details.
+
 ### 3. Task Decomposition Phase
 
 ```bash

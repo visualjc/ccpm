@@ -1,12 +1,10 @@
-# !/bin/bash
-# Check if PRD directory exists
-if [ ! -d ".claude/prds" ]; then
-  echo "📁 No PRD directory found. Create your first PRD with: /pm:prd-new <feature-name>"
-  exit 0
-fi
+#!/bin/bash
+
+# Resolve PRD directory (repo-relative). Ensure it exists.
+PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh --ensure) || exit 1
 
 # Check for PRD files
-if ! ls .claude/prds/*.md >/dev/null 2>&1; then
+if ! ls "$PRD_DIR"/*.md >/dev/null 2>&1; then
   echo "📁 No PRDs found. Create your first PRD with: /pm:prd-new <feature-name>"
   exit 0
 fi
@@ -28,7 +26,7 @@ echo ""
 
 # Display by status groups
 echo "🔍 Backlog PRDs:"
-for file in .claude/prds/*.md; do
+for file in "$PRD_DIR"/*.md; do
   [ -f "$file" ] || continue
   status=$(grep "^status:" "$file" | head -1 | sed 's/^status: *//')
   if [ "$status" = "backlog" ] || [ "$status" = "draft" ] || [ -z "$status" ]; then
@@ -36,7 +34,6 @@ for file in .claude/prds/*.md; do
     desc=$(grep "^description:" "$file" | head -1 | sed 's/^description: *//')
     [ -z "$name" ] && name=$(basename "$file" .md)
     [ -z "$desc" ] && desc="No description"
-    # echo "   📋 $name - $desc"
     echo "   📋 $file - $desc"
     ((backlog_count++))
   fi
@@ -46,7 +43,7 @@ done
 
 echo ""
 echo "🔄 In-Progress PRDs:"
-for file in .claude/prds/*.md; do
+for file in "$PRD_DIR"/*.md; do
   [ -f "$file" ] || continue
   status=$(grep "^status:" "$file" | head -1 | sed 's/^status: *//')
   if [ "$status" = "in-progress" ] || [ "$status" = "active" ]; then
@@ -54,7 +51,6 @@ for file in .claude/prds/*.md; do
     desc=$(grep "^description:" "$file" | head -1 | sed 's/^description: *//')
     [ -z "$name" ] && name=$(basename "$file" .md)
     [ -z "$desc" ] && desc="No description"
-    # echo "   📋 $name - $desc"
     echo "   📋 $file - $desc"
     ((in_progress_count++))
   fi
@@ -63,7 +59,7 @@ done
 
 echo ""
 echo "✅ Implemented PRDs:"
-for file in .claude/prds/*.md; do
+for file in "$PRD_DIR"/*.md; do
   [ -f "$file" ] || continue
   status=$(grep "^status:" "$file" | head -1 | sed 's/^status: *//')
   if [ "$status" = "implemented" ] || [ "$status" = "completed" ] || [ "$status" = "done" ]; then
@@ -71,7 +67,6 @@ for file in .claude/prds/*.md; do
     desc=$(grep "^description:" "$file" | head -1 | sed 's/^description: *//')
     [ -z "$name" ] && name=$(basename "$file" .md)
     [ -z "$desc" ] && desc="No description"
-    # echo "   📋 $name - $desc"
     echo "   📋 $file - $desc"
     ((implemented_count++))
   fi

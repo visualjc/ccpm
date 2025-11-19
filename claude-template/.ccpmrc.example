@@ -1,0 +1,13 @@
+# Example CCPM configuration
+#
+# Set the PRD directory path used by PM commands.
+# Use a repo-relative path (no leading ./) and NO trailing slash.
+# Examples:
+# PRD_DIR=.claude/prds
+# PRD_DIR=docs/prds
+
+PRD_DIR=docs/prds
+
+
+
+
