@@ -17,7 +17,7 @@ Edit an existing Product Requirements Document.
 
 Resolve PRD path and read `$PRD_DIR/$ARGUMENTS.md`:
 ```bash
-PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh) || { echo "❌ No PRD directory. Run /pm:prd-new $ARGUMENTS first"; exit 1; }
+PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh) || { echo "❌ No PRD directory. Run /pm:prd-new $ARGUMENTS first"; exit 1; }
 ```
 Read `$PRD_DIR/$ARGUMENTS.md`:
 - Parse frontmatter

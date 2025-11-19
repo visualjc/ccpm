@@ -6,7 +6,12 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 # Locate VERSION file
 VERSION_FILE="$ROOT/VERSION"
 if [ ! -f "$VERSION_FILE" ]; then
-  # Fallback to template location if not in root
+  # Fallback to source directory (ccpm/) if not in root
+  VERSION_FILE="$ROOT/ccpm/VERSION"
+fi
+
+# Legacy fallback for old structure
+if [ ! -f "$VERSION_FILE" ]; then
   VERSION_FILE="$ROOT/claude-template/VERSION"
 fi
 

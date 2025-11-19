@@ -1,3 +1,7 @@
 .DS_Store
 .idea/
 CLAUDE.md
+
+# User-specific CCPM configuration
+.claude/.ccpmrc
+ccpm/.ccpmrc
