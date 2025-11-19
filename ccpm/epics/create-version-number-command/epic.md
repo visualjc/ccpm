@@ -3,7 +3,7 @@ name: create-version-number-command
 status: backlog
 created: 2025-10-21T01:38:53Z
 progress: 0%
-prd: .claude/prds/create-version-number-command.md
+prd: ${PRD_DIR}/create-version-number-command.md
 github: https://github.com/visualjc/ccpm/issues/1
 ---
 

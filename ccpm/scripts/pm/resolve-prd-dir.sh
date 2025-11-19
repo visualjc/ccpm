@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # Resolve the PRD directory according to precedence:
 # 1) CCPM_PRD_DIR env var
@@ -34,6 +34,19 @@ case "$PRD_DIR" in
 esac
 PRD_DIR="${PRD_DIR%/}"
 
+# Security: Prevent path traversal (must be within project root)
+# Check if path contains ".."
+if [[ "$PRD_DIR" == *".."* ]]; then
+  echo "❌ Security Error: PRD directory path cannot contain '..'" >&2
+  exit 1
+fi
+
+# Check if path starts with / (absolute path not allowed for repo-relative logic)
+if [[ "$PRD_DIR" == /* ]]; then
+  echo "❌ Security Error: PRD directory must be relative to project root" >&2
+  exit 1
+fi
+
 # Ensure or validate directory
 if [ "${1:-}" = "--ensure" ]; then
   # Create directory if it doesn't exist
@@ -50,7 +63,3 @@ fi
 
 # Output repo-relative path
 echo "$PRD_DIR"
-
-
-
-
