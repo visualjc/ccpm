@@ -165,6 +165,7 @@ task_count=$(ls .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
 
 ```bash
 # Create sequentially for small batches or when parallel mode disabled
+if [ "$task_count" -lt 5 ] || [ "$PARALLEL_MODE" = "false" ]; then
   for task_file in .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
     [ -f "$task_file" ] || continue
 
