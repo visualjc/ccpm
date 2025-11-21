@@ -84,7 +84,32 @@ if ! test -f .claude/epics/$ARGUMENTS/{issue}-analysis.md; then
 fi
 ```
 
-### 4. Launch Parallel Agents
+### 4. Determine Workflow Mode
+
+Check configuration to decide execution strategy:
+
+```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
+```
+
+**Decision Point - Read Carefully:**
+
+**IF `PARALLEL_MODE` is "false":**
+- ✋ **STOP** - Do NOT use the Task tool
+- ✋ **STOP** - Do NOT launch parallel agents
+- → Jump to "Sequential Execution Mode" section below
+- You will work on each issue/stream one at a time with user approval
+
+**IF `PARALLEL_MODE` is "true":**
+- ✅ Proceed with "Parallel Agent Launch" section below
+- Launch multiple agents using Task tool
+
+---
+
+### 5. Parallel Agent Launch
+
+**Only execute this section if PARALLEL_MODE="true" above.**
 
 For each ready issue with analysis:
 
@@ -126,7 +151,64 @@ Task:
     .claude/epics/$ARGUMENTS/updates/{issue}/stream-{X}.md
 ```
 
-### 5. Track Active Agents
+---
+
+### 6. Sequential Execution Mode
+
+**Execute this section if PARALLEL_MODE="false" above.**
+
+Work on each issue and stream sequentially with user approval:
+
+#### For Each Ready Issue:
+
+1. **Select Next Issue:**
+   - List all ready issues (no unmet dependencies)
+   - Show issue details and estimated scope
+   - Ask user: "Which issue to work on? (issue number or 'skip')"
+
+2. **Analyze Work Streams:**
+   - If no analysis file exists, create it inline
+   - Break work into logical streams (A, B, C, etc.)
+   - Show file patterns for each stream
+
+3. **Sequential Stream Execution:**
+   ```markdown
+   Working on Issue #{issue}: {title}
+
+   Stream A: {description}
+   Files: {patterns}
+
+   Implementing changes...
+   ```
+
+   - Work on Stream A completely
+   - Write all code changes for Stream A
+   - Test Stream A changes
+   - Commit Stream A: `git add {files} && git commit -m "Issue #{issue}: {stream A description}"`
+
+   - Ask user: "Stream A complete. Continue to Stream B? (yes/no/review)"
+     - yes → Proceed to Stream B
+     - no → Stop and let user review
+     - review → Show `git diff` and ask again
+
+4. **After All Streams Complete:**
+   - Run full test suite if available
+   - Ask user: "Issue #{issue} complete. Start next issue? (yes/no)"
+
+5. **Repeat Until All Ready Issues Done**
+
+**Benefits of Sequential Mode:**
+- ✅ See all changes in current IDE
+- ✅ Run tests manually between streams
+- ✅ Review diffs before proceeding
+- ✅ Full control over each step
+- ✅ No git lock conflicts
+
+---
+
+### 8. Track Active Agents (Parallel Mode Only)
+
+**Skip this section if PARALLEL_MODE="false".**
 
 Create/update `.claude/epics/$ARGUMENTS/execution-status.md`:
 
@@ -151,7 +233,9 @@ branch: epic/$ARGUMENTS
 - {None yet}
 ```
 
-### 6. Monitor and Coordinate
+### 9. Monitor and Coordinate (Parallel Mode Only)
+
+**Skip this section if PARALLEL_MODE="false".**
 
 Set up monitoring:
 ```bash
@@ -172,7 +256,9 @@ Merge when complete:
 "
 ```
 
-### 7. Handle Dependencies
+### 10. Handle Dependencies (Parallel Mode Only)
+
+**Skip this section if PARALLEL_MODE="false".**
 
 As agents complete streams:
 - Check if any blocked issues are now ready
