@@ -128,28 +128,44 @@ epic_number=$(gh issue create \
 
 Store the returned issue number for epic frontmatter update.
 
-### 2. Create Task Sub-Issues
+### 2. Determine Sync Strategy
 
-Check if gh-sub-issue is available:
+Check configuration, gh-sub-issue availability, and count tasks:
+
 ```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
+
+# Check if gh-sub-issue is available
 if gh extension list | grep -q "yahsan2/gh-sub-issue"; then
   use_subissues=true
 else
   use_subissues=false
   echo "⚠️ gh-sub-issue not installed. Using fallback mode."
 fi
-```
 
-Count task files to determine strategy:
-```bash
 task_count=$(ls .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
 ```
 
-### For Small Batches (< 5 tasks): Sequential Creation
+**Sync Strategy Decision:**
+
+**IF `PARALLEL_MODE` is "true" AND `task_count` >= 5:**
+- Use parallel batch creation (fast for large epics)
+- Proceed to "Parallel Batch Creation" section below
+
+**OTHERWISE (Small batch OR Parallel disabled):**
+- Use sequential creation (one issue at a time)
+- Proceed to "Sequential Creation" section below
+
+---
+
+### 3. Sequential Creation
+
+**Execute this section if task_count < 5 OR PARALLEL_MODE="false".**
 
 ```bash
-if [ "$task_count" -lt 5 ]; then
-  # Create sequentially for small batches
+# Create sequentially for small batches or when parallel mode disabled
+if [ "$task_count" -lt 5 ] || [ "$PARALLEL_MODE" = "false" ]; then
   for task_file in .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
     [ -f "$task_file" ] || continue
 
@@ -185,10 +201,14 @@ if [ "$task_count" -lt 5 ]; then
 fi
 ```
 
-### For Larger Batches: Parallel Creation
+---
+
+### 4. Parallel Batch Creation
+
+**Only execute this section if PARALLEL_MODE="true" AND task_count >= 5.**
 
 ```bash
-if [ "$task_count" -ge 5 ]; then
+if [ "$task_count" -ge 5 ] && [ "$PARALLEL_MODE" = "true" ]; then
   echo "Creating $task_count sub-issues in parallel..."
 
   # Check if gh-sub-issue is available for parallel agents
@@ -419,7 +439,11 @@ echo "" >> .claude/epics/$ARGUMENTS/github-mapping.md
 echo "Synced: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .claude/epics/$ARGUMENTS/github-mapping.md
 ```
 
-### 7. Create Worktree
+### 7. Post-Sync Worktree Setup
+
+**Check `WORKTREE_MODE` from step 2:**
+
+**IF `WORKTREE_MODE` is "true":**
 
 Follow `/rules/worktree-operations.md` to create development worktree:
 
@@ -434,21 +458,38 @@ git worktree add ../epic-$ARGUMENTS -b epic/$ARGUMENTS
 echo "✅ Created worktree: ../epic-$ARGUMENTS"
 ```
 
+**IF `WORKTREE_MODE` is "false":**
+
+- Do **NOT** create worktree
+- Do **NOT** checkout branch yet
+- Branch `epic/$ARGUMENTS` was created remotely during issue creation
+- Notify user: "✅ Branch 'epic/$ARGUMENTS' created remotely. Run /pm:epic-start $ARGUMENTS to begin work."
+
+---
+
 ### 8. Output
 
-```
-✅ Synced to GitHub
-  - Epic: #{epic_number} - {epic_title}
-  - Tasks: {count} sub-issues created
-  - Labels applied: epic, task, epic:{name}
-  - Files renamed: 001.md → {issue_id}.md
-  - References updated: depends_on/conflicts_with now use issue IDs
-  - Worktree: ../epic-$ARGUMENTS
+Display sync summary with conditional worktree information:
 
-Next steps:
-  - Start parallel execution: /pm:epic-start $ARGUMENTS
-  - Or work on single issue: /pm:issue-start {issue_number}
-  - View epic: https://github.com/{owner}/{repo}/issues/{epic_number}
+```bash
+echo "✅ Synced to GitHub"
+echo "  - Epic: #${epic_number} - ${epic_title}"
+echo "  - Tasks: ${task_count} sub-issues created"
+echo "  - Labels applied: epic, task, epic:${ARGUMENTS}"
+echo "  - Files renamed: 001.md → {issue_id}.md"
+echo "  - References updated: depends_on/conflicts_with now use issue IDs"
+
+if [ "$WORKTREE_MODE" = "true" ]; then
+  echo "  - Worktree: ../epic-${ARGUMENTS}"
+else
+  echo "  - Branch: epic/${ARGUMENTS} (current directory mode)"
+fi
+
+echo ""
+echo "Next steps:"
+echo "  - Start execution: /pm:epic-start ${ARGUMENTS}"
+echo "  - Or work on single issue: /pm:issue-start {issue_number}"
+echo "  - View epic: https://github.com/${repo}/issues/${epic_number}"
 ```
 
 ## Error Handling

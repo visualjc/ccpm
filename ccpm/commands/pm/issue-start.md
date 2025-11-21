@@ -35,7 +35,16 @@ Begin work on a GitHub issue with parallel agents based on work stream analysis.
 
 ## Instructions
 
-### 1. Ensure Worktree Exists
+### 1. Check Configuration
+
+```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
+```
+
+### 2. Ensure Work Location
+
+**IF `WORKTREE_MODE` is "true":**
 
 Check if epic worktree exists:
 ```bash
@@ -47,16 +56,59 @@ if ! git worktree list | grep -q "epic-$epic_name"; then
   echo "❌ No worktree for epic. Run: /pm:epic-start $epic_name"
   exit 1
 fi
+
+# Work in: ../epic-$epic_name/
 ```
 
-### 2. Read Analysis
+**IF `WORKTREE_MODE` is "false":**
+
+Check if current branch matches epic:
+```bash
+# Find epic name from task file
+epic_name={extracted_from_path}
+
+current_branch=$(git branch --show-current)
+if [ "$current_branch" != "epic/$epic_name" ]; then
+  echo "⚠️  You are not on the epic branch."
+  echo "   Current: $current_branch"
+  echo "   Required: epic/$epic_name"
+  echo ""
+  echo "   Please run: git checkout epic/$epic_name"
+  exit 1
+fi
+
+# Work in: Current directory
+```
+
+---
+
+### 3. Read Analysis
 
 Read `.claude/epics/{epic_name}/$ARGUMENTS-analysis.md`:
 - Parse parallel streams
 - Identify which can start immediately
 - Note dependencies between streams
 
-### 3. Setup Progress Tracking
+### 4. Determine Execution Strategy
+
+**Decision Point - Read Carefully:**
+
+**IF `PARALLEL_MODE` is "false":**
+- ✋ **STOP** - Do NOT use Task tool for parallel workers
+- → Jump to "Sequential Execution" section below
+- Work on one stream at a time with user approval
+
+**IF `PARALLEL_MODE` is "true":**
+- ✅ Proceed with "Parallel Agent Launch" section below
+- Launch multiple agents for different streams
+
+---
+
+### 5. Parallel Agent Launch
+
+**Only execute this section if PARALLEL_MODE="true".**
+
+#### Setup Progress Tracking
 
 Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
 
@@ -67,7 +119,7 @@ mkdir -p .claude/epics/{epic_name}/updates/$ARGUMENTS
 
 Update task file frontmatter `updated` field with current datetime.
 
-### 4. Launch Parallel Agents
+#### Launch Agents
 
 For each stream that can start immediately:
 
@@ -123,14 +175,62 @@ Task:
     Complete your stream's work and mark as completed when done.
 ```
 
-### 5. GitHub Assignment
+---
+
+### 6. Sequential Execution
+
+**Execute this section if PARALLEL_MODE="false".**
+
+Work on streams one at a time with user control:
+
+#### For Each Stream:
+
+1. **Select Stream:**
+   - List all streams from analysis
+   - Show file patterns for each
+   - Ask user: "Which stream to work on? (A/B/C or 'done')"
+
+2. **Work on Selected Stream:**
+   ```markdown
+   Working on Stream {X}: {stream_name}
+
+   Files: {file_patterns}
+   Scope: {description}
+
+   Implementing changes...
+   ```
+
+   - Read requirements from task file
+   - Implement all changes for this stream
+   - Test changes if possible
+   - Commit stream: `git add {files} && git commit -m "Issue #$ARGUMENTS: {stream description}"`
+
+3. **After Stream Complete:**
+   - Show git diff summary
+   - Ask user: "Stream {X} complete. Continue to next stream? (yes/no/review)"
+     - yes → Select next stream
+     - no → Stop, let user review
+     - review → Show full `git diff`, then ask again
+
+4. **Repeat Until All Streams Done**
+
+**Benefits of Sequential Mode:**
+- ✅ Full control over each stream
+- ✅ Review changes before proceeding
+- ✅ Run tests manually between streams
+- ✅ No parallel coordination needed
+- ✅ IDE sees all changes immediately
+
+---
+
+### 7. GitHub Assignment
 
 ```bash
 # Assign to self and mark in-progress
 gh issue edit $ARGUMENTS --add-assignee @me --add-label "in-progress"
 ```
 
-### 6. Output
+### 8. Output
 
 ```
 ✅ Started parallel work on issue #$ARGUMENTS

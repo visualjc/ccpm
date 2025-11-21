@@ -29,6 +29,7 @@ Stop losing context. Stop blocking on tasks. Stop shipping bugs. This battle-tes
 - [Why GitHub Issues?](#why-github-issues)
 - [Core Principle: No Vibe Coding](#core-principle-no-vibe-coding)
 - [System Architecture](#system-architecture)
+- [Configuration](#configuration)
 - [Workflow Phases](#workflow-phases)
 - [Command Reference](#command-reference)
 - [The Parallel Execution System](#the-parallel-execution-system)
@@ -151,6 +152,42 @@ No shortcuts. No assumptions. No regrets.
 └── scripts/           # Place any script files you'd like to use here
 ```
 
+## Configuration
+
+CCPM supports flexible workflow modes to match your team's preferences.
+
+### Workflow Modes
+
+Configure via `.claude/.ccpmrc`:
+
+```bash
+# 100% Agentic (default) - Fast autonomous execution
+PARALLEL_MODE=true
+WORKTREE_MODE=true
+
+# Human-in-the-loop - IDE-friendly manual control
+PARALLEL_MODE=false
+WORKTREE_MODE=false
+```
+
+**PARALLEL_MODE** controls task execution:
+- `true`: Multiple agents work concurrently (faster)
+- `false`: Sequential execution with human approval at each step
+
+**WORKTREE_MODE** controls work location:
+- `true`: Creates isolated worktrees at `../epic-{name}`
+- `false`: Works in current directory on `epic/{name}` branch (IDE-friendly)
+
+**Safety constraint**: `PARALLEL_MODE=true` requires `WORKTREE_MODE=true` to prevent git lock conflicts.
+
+See [workflow-modes.md](ccpm/rules/workflow-modes.md) for detailed configuration guide.
+
+### PRD Directory
+
+By default PRDs are stored in `.claude/prds`. You can configure a non-hidden directory (e.g., `docs/prds`) via:
+- Environment: `CCPM_PRD_DIR=docs/prds`
+- Config file: `PRD_DIR=docs/prds` in `.claude/.ccpmrc`
+
 ## Workflow Phases
 
 ### 1. Product Planning Phase
@@ -170,8 +207,6 @@ Launches comprehensive brainstorming to create a Product Requirements Document c
 Transforms PRD into a technical implementation plan with architectural decisions, technical approach, and dependency mapping.
 
 **Output:** `.claude/epics/feature-name/epic.md`
-
-> Note on PRD directory: By default PRDs are stored in `.claude/prds`. You can configure a non-hidden directory (e.g., `docs/prds`) via env `CCPM_PRD_DIR` or `.claude/.ccpmrc` (`PRD_DIR=...`). See `docs/ccpm-configuration.md` for details.
 
 ### 3. Task Decomposition Phase
 
@@ -403,7 +438,7 @@ Teams using this system report:
    cd path/to/your/project/
    iwr -useb https://automaze.io/ccpm/install | iex
    ```
-   > ⚠️ **IMPORTANT**: If you already have a `.claude` directory, clone this repository to a different directory and copy the contents of the cloned `.claude` directory to your project's `.claude` directory.
+   > ✅ **Note**: The installation script automatically copies `ccpm/` to `.claude/` in your project.
 
    See full/other installation options in the [installation guide ›](https://github.com/automazeio/ccpm/tree/main/install)
 

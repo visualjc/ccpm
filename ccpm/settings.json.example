@@ -5,8 +5,14 @@
         "enabled": true,
         "script": ".claude/hooks/bash-worktree-fix.sh",
         "description": "Automatically prepends worktree path to Bash commands when in a worktree",
-        "apply_to_subagents": true
+        "apply_to_subagents": true,
+        "_comment": "Only needed when WORKTREE_MODE=true in .ccpmrc. Disable if using WORKTREE_MODE=false for current directory workflows"
       }
     }
+  },
+  "_workflow_notes": {
+    "human_in_the_loop": "For IDE-based workflows, set WORKTREE_MODE=false and PARALLEL_MODE=false in .claude/.ccpmrc",
+    "agentic": "For autonomous execution, set WORKTREE_MODE=true and PARALLEL_MODE=true (default)",
+    "hook_requirement": "The bash-worktree-fix hook is only needed when WORKTREE_MODE=true"
   }
 }
