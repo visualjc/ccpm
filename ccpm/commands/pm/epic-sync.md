@@ -128,25 +128,22 @@ epic_number=$(gh issue create \
 
 Store the returned issue number for epic frontmatter update.
 
-### 2. Create Task Sub-Issues
+### 2. Determine Sync Strategy
 
-Check if gh-sub-issue is available:
+Check configuration, gh-sub-issue availability, and count tasks:
+
 ```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
+
+# Check if gh-sub-issue is available
 if gh extension list | grep -q "yahsan2/gh-sub-issue"; then
   use_subissues=true
 else
   use_subissues=false
   echo "⚠️ gh-sub-issue not installed. Using fallback mode."
 fi
-```
 
-### 2. Determine Sync Strategy
-
-Check configuration and count tasks:
-
-```bash
-PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
-WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
 task_count=$(ls .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
 ```
 
@@ -167,8 +164,7 @@ task_count=$(ls .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
 **Execute this section if task_count < 5 OR PARALLEL_MODE="false".**
 
 ```bash
-if [ "$task_count" -lt 5 ]; then
-  # Create sequentially for small batches
+# Create sequentially for small batches or when parallel mode disabled
   for task_file in .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md; do
     [ -f "$task_file" ] || continue
 
@@ -472,19 +468,27 @@ echo "✅ Created worktree: ../epic-$ARGUMENTS"
 
 ### 8. Output
 
-```
-✅ Synced to GitHub
-  - Epic: #{epic_number} - {epic_title}
-  - Tasks: {count} sub-issues created
-  - Labels applied: epic, task, epic:{name}
-  - Files renamed: 001.md → {issue_id}.md
-  - References updated: depends_on/conflicts_with now use issue IDs
-  - Worktree: ../epic-$ARGUMENTS
+Display sync summary with conditional worktree information:
 
-Next steps:
-  - Start parallel execution: /pm:epic-start $ARGUMENTS
-  - Or work on single issue: /pm:issue-start {issue_number}
-  - View epic: https://github.com/{owner}/{repo}/issues/{epic_number}
+```bash
+echo "✅ Synced to GitHub"
+echo "  - Epic: #${epic_number} - ${epic_title}"
+echo "  - Tasks: ${task_count} sub-issues created"
+echo "  - Labels applied: epic, task, epic:${ARGUMENTS}"
+echo "  - Files renamed: 001.md → {issue_id}.md"
+echo "  - References updated: depends_on/conflicts_with now use issue IDs"
+
+if [ "$WORKTREE_MODE" = "true" ]; then
+  echo "  - Worktree: ../epic-${ARGUMENTS}"
+else
+  echo "  - Branch: epic/${ARGUMENTS} (current directory mode)"
+fi
+
+echo ""
+echo "Next steps:"
+echo "  - Start execution: /pm:epic-start ${ARGUMENTS}"
+echo "  - Or work on single issue: /pm:issue-start {issue_number}"
+echo "  - View epic: https://github.com/${repo}/issues/${epic_number}"
 ```
 
 ## Error Handling
