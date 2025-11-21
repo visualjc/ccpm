@@ -48,16 +48,43 @@ You are decomposing an epic into specific, actionable tasks for: **$ARGUMENTS**
 - Understand the technical approach and requirements
 - Review the task breakdown preview
 
-### 2. Analyze for Parallel Creation
+### 2. Check Configuration
+
+Determine execution mode:
+
+```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+```
+
+**Decision Point - Read Carefully:**
+
+**IF `PARALLEL_MODE` is "false":**
+- ✋ **STOP** - Force sequential task creation
+- ✋ **STOP** - Do NOT use Task tool for parallel creation
+- → Skip to "Sequential Task Creation" section below
+- Create tasks one at a time in order
+
+**IF `PARALLEL_MODE` is "true":**
+- ✅ Analyze for parallel creation below
+- Consider task dependencies and independence
+- Proceed with "Parallel Task Creation" section if appropriate
+
+---
+
+### 3. Analyze for Parallel Creation
+
+**Only execute if PARALLEL_MODE="true" above.**
 
 Determine if tasks can be created in parallel:
 - If tasks are mostly independent: Create in parallel using Task agents
-- If tasks have complex dependencies: Create sequentially
+- If tasks have complex dependencies: Create sequentially even in parallel mode
 - For best results: Group independent tasks for parallel creation
 
-### 3. Parallel Task Creation (When Possible)
+### 4. Parallel Task Creation
 
-If tasks can be created in parallel, spawn sub-agents:
+**Only execute if PARALLEL_MODE="true" AND tasks are independent.**
+
+Spawn sub-agents to create task files:
 
 ```yaml
 Task:
@@ -79,8 +106,35 @@ Task:
     Return: List of files created
 ```
 
-### 4. Task File Format with Frontmatter
-For each task, create a file with this exact structure:
+---
+
+### 5. Sequential Task Creation
+
+**Execute this section if PARALLEL_MODE="false" OR tasks have complex dependencies.**
+
+Create tasks one at a time:
+
+1. **For Each Task in Epic Breakdown:**
+   - Create task file: `.claude/epics/$ARGUMENTS/{number}.md`
+   - Number sequentially (001.md, 002.md, 003.md, etc.)
+   - Use exact format below with frontmatter
+   - Set dependencies in `depends_on` field
+   - Set `parallel: true/false` based on independence
+
+2. **Sequential Benefits:**
+   - More careful dependency analysis
+   - Better for complex, interconnected tasks
+   - Easier to review and validate each task
+
+3. **Show Progress:**
+   - After each task created, show: "✅ Created task {number}: {title}"
+   - Continue until all tasks from epic breakdown are created
+
+---
+
+### 6. Task File Format with Frontmatter
+
+For each task (parallel or sequential), create a file with this exact structure:
 
 ```markdown
 ---
@@ -126,12 +180,12 @@ Clear, concise description of what needs to be done
 - [ ] Deployed to staging
 ```
 
-### 3. Task Naming Convention
+### 7. Task Naming Convention
 Save tasks as: `.claude/epics/$ARGUMENTS/{task_number}.md`
 - Use sequential numbering: 001.md, 002.md, etc.
 - Keep task titles short but descriptive
 
-### 4. Frontmatter Guidelines
+### 8. Frontmatter Guidelines
 - **name**: Use a descriptive task title (without "Task:" prefix)
 - **status**: Always start with "open" for new tasks
 - **created**: Get REAL current datetime by running: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
@@ -141,7 +195,7 @@ Save tasks as: `.claude/epics/$ARGUMENTS/{task_number}.md`
 - **parallel**: Set to true if this can run alongside other tasks without conflicts
 - **conflicts_with**: List task numbers that modify the same files (helps coordination)
 
-### 5. Task Types to Consider
+### 9. Task Types to Consider
 - **Setup tasks**: Environment, dependencies, scaffolding
 - **Data tasks**: Models, schemas, migrations
 - **API tasks**: Endpoints, services, integration

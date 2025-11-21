@@ -140,12 +140,31 @@ else
 fi
 ```
 
-Count task files to determine strategy:
+### 2. Determine Sync Strategy
+
+Check configuration and count tasks:
+
 ```bash
+PARALLEL_MODE=$(.claude/scripts/pm/resolve-config.sh PARALLEL_MODE)
+WORKTREE_MODE=$(.claude/scripts/pm/resolve-config.sh WORKTREE_MODE)
 task_count=$(ls .claude/epics/$ARGUMENTS/[0-9][0-9][0-9].md 2>/dev/null | wc -l)
 ```
 
-### For Small Batches (< 5 tasks): Sequential Creation
+**Sync Strategy Decision:**
+
+**IF `PARALLEL_MODE` is "true" AND `task_count` >= 5:**
+- Use parallel batch creation (fast for large epics)
+- Proceed to "Parallel Batch Creation" section below
+
+**OTHERWISE (Small batch OR Parallel disabled):**
+- Use sequential creation (one issue at a time)
+- Proceed to "Sequential Creation" section below
+
+---
+
+### 3. Sequential Creation
+
+**Execute this section if task_count < 5 OR PARALLEL_MODE="false".**
 
 ```bash
 if [ "$task_count" -lt 5 ]; then
@@ -185,10 +204,14 @@ if [ "$task_count" -lt 5 ]; then
 fi
 ```
 
-### For Larger Batches: Parallel Creation
+---
+
+### 4. Parallel Batch Creation
+
+**Only execute this section if PARALLEL_MODE="true" AND task_count >= 5.**
 
 ```bash
-if [ "$task_count" -ge 5 ]; then
+if [ "$task_count" -ge 5 ] && [ "$PARALLEL_MODE" = "true" ]; then
   echo "Creating $task_count sub-issues in parallel..."
 
   # Check if gh-sub-issue is available for parallel agents
@@ -419,7 +442,11 @@ echo "" >> .claude/epics/$ARGUMENTS/github-mapping.md
 echo "Synced: $(date -u +"%Y-%m-%dT%H:%M:%SZ")" >> .claude/epics/$ARGUMENTS/github-mapping.md
 ```
 
-### 7. Create Worktree
+### 7. Post-Sync Worktree Setup
+
+**Check `WORKTREE_MODE` from step 2:**
+
+**IF `WORKTREE_MODE` is "true":**
 
 Follow `/rules/worktree-operations.md` to create development worktree:
 
@@ -433,6 +460,15 @@ git worktree add ../epic-$ARGUMENTS -b epic/$ARGUMENTS
 
 echo "✅ Created worktree: ../epic-$ARGUMENTS"
 ```
+
+**IF `WORKTREE_MODE` is "false":**
+
+- Do **NOT** create worktree
+- Do **NOT** checkout branch yet
+- Branch `epic/$ARGUMENTS` was created remotely during issue creation
+- Notify user: "✅ Branch 'epic/$ARGUMENTS' created remotely. Run /pm:epic-start $ARGUMENTS to begin work."
+
+---
 
 ### 8. Output
 
