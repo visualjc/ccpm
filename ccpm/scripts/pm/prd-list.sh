@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Resolve PRD directory (repo-relative). Ensure it exists.
-PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh --ensure) || exit 1
+PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh --ensure) || exit 1
 
 # Check for PRD files
 if ! ls "$PRD_DIR"/*.md >/dev/null 2>&1; then
