@@ -235,6 +235,6 @@ echo "WORKTREE_MODE=false" >> .claude/.ccpmrc
 
 ## See Also
 
-- [.ccpmrc.example](/ccpm/.ccpmrc.example) - Example configuration file
-- [resolve-config.sh](/ccpm/scripts/pm/resolve-config.sh) - Configuration resolution script
-- [settings.json.example](/ccpm/settings.json.example) - Hook configuration
+- [.ccpmrc.example](/.claude/.ccpmrc.example) - Example configuration file
+- [resolve-config.sh](/.claude/scripts/pm/resolve-config.sh) - Configuration resolution script
+- [settings.json.example](/.claude/settings.json.example) - Hook configuration

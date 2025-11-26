@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Resolve PRD directory (repo-relative). Validate existence.
-PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh) || exit 0
+PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh) || exit 0
 
 echo "📄 PRD Status Report"
 echo "===================="

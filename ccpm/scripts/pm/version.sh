@@ -6,8 +6,8 @@ ROOT="$(git rev-parse --show-toplevel 2>/dev/null || pwd)"
 # Locate VERSION file
 VERSION_FILE="$ROOT/VERSION"
 if [ ! -f "$VERSION_FILE" ]; then
-  # Fallback to source directory (ccpm/) if not in root
-  VERSION_FILE="$ROOT/ccpm/VERSION"
+  # Fallback to .claude directory if not in root
+  VERSION_FILE="$ROOT/.claude/VERSION"
 fi
 
 # Legacy fallback for old structure

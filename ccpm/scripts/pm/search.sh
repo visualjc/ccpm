@@ -17,7 +17,7 @@ echo "================================"
 echo ""
 
 # Search in PRDs
-PRD_DIR=$(ccpm/scripts/pm/resolve-prd-dir.sh 2>/dev/null)
+PRD_DIR=$(.claude/scripts/pm/resolve-prd-dir.sh 2>/dev/null)
 if [ -n "$PRD_DIR" ] && [ -d "$PRD_DIR" ]; then
   echo "📄 PRDs:"
   results=$(grep -l -i "$query" "$PRD_DIR"/*.md 2>/dev/null)
