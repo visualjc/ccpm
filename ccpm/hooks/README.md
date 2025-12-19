@@ -22,17 +22,20 @@ The pre-tool-use hook automatically detects when you're in a worktree and inject
 
 Add to your `.claude/settings.json`:
 
-
 ```json
 {
   "hooks": {
-    "pre-tool-use": {
-      "Bash": {
-        "enabled": true,
-        "script": ".claude/hooks/bash-worktree-fix.sh",
-        "apply_to_subagents": true
+    "PreToolUse": [
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/bash-worktree-fix.sh"
+          }
+        ]
       }
-    }
+    ]
   }
 }
 ```
