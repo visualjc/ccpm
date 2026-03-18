@@ -433,12 +433,27 @@ Teams using this system report:
    # or: wget -qO- https://automaze.io/ccpm/install | bash
    ```
 
+   #### Unix/Linux/macOS (Cursor target)
+
+   ```bash
+   cd path/to/your/project/
+   curl -sSL https://automaze.io/ccpm/install | bash -s -- --target cursor
+   # or: wget -qO- https://automaze.io/ccpm/install | bash -s -- --target cursor
+   ```
+
    #### Windows (PowerShell)
    ```bash
    cd path/to/your/project/
    iwr -useb https://automaze.io/ccpm/install | iex
    ```
-   > ✅ **Note**: The installation script automatically copies `ccpm/` to `.claude/` in your project.
+
+   #### Windows (Cursor target)
+   ```bash
+   cd path/to/your/project/
+   curl -o ccpm.bat https://automaze.io/ccpm/install && ccpm.bat --target cursor
+   ```
+
+   > ✅ **Note**: The default install target copies `ccpm/` to `.claude/`. The Cursor target copies `cursor-ccpm/commands` and `cursor-ccpm/ccpm` into `.cursor/`.
 
    See full/other installation options in the [installation guide ›](https://github.com/automazeio/ccpm/tree/main/install)
 

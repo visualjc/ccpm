@@ -1,0 +1,6 @@
+# CCPM Configuration
+# Human-in-the-loop mode (no parallel agents, no worktrees)
+
+PARALLEL_MODE=false
+WORKTREE_MODE=false
+PRD_DIR=.cursor/ccpm/prds
