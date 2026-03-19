@@ -453,7 +453,7 @@ Teams using this system report:
    curl -o ccpm.bat https://automaze.io/ccpm/install && ccpm.bat --target cursor
    ```
 
-   > ✅ **Note**: The default install target copies `ccpm/` to `.claude/`. The Cursor target copies `cursor-ccpm/commands` and `cursor-ccpm/ccpm` into `.cursor/`.
+   > ✅ **Note**: The default install target copies `ccpm/` to `.claude/`. The Cursor target copies `cursor-ccpm/commands` and `cursor-ccpm/ccpm` into `.cursor/`, then adds `.cursor/commands/` and `.cursor/ccpm/` to `.gitignore`.
 
    See full/other installation options in the [installation guide ›](https://github.com/automazeio/ccpm/tree/main/install)
 
