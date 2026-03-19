@@ -51,6 +51,16 @@ copy_dir_contents() {
     cp -R "$source_dir"/. "$dest_dir"/
 }
 
+ensure_gitignore_entry() {
+    local gitignore_file="$1"
+    local entry="$2"
+
+    touch "$gitignore_file"
+    if ! grep -Fxq "$entry" "$gitignore_file"; then
+        printf "%s\n" "$entry" >> "$gitignore_file"
+    fi
+}
+
 # Check for target directory argument
 if [ -z "$1" ]; then
     echo -e "${RED}Error: Target directory is required${NC}"
@@ -163,6 +173,9 @@ else
         exit 1
     fi
 
+    ensure_gitignore_entry "$TARGET_DIR/.gitignore" ".cursor/ccpm/"
+    ensure_gitignore_entry "$TARGET_DIR/.gitignore" ".cursor/commands/"
+
     FILE_COUNT=$(find "$TARGET_DIR/.cursor" -type f | wc -l | tr -d ' ')
 
     echo ""
@@ -171,10 +184,14 @@ else
     echo "Installed $FILE_COUNT files to: $TARGET_DIR/.cursor/"
     echo ""
     echo -e "${YELLOW}Next steps:${NC}"
-    echo "1. Initialize the PM system:"
+    echo "1. Added CCPM-managed Cursor paths to .gitignore:"
+    echo "   .cursor/ccpm/"
+    echo "   .cursor/commands/"
+    echo ""
+    echo "2. Initialize the PM system:"
     echo "   /pm:init"
     echo ""
-    echo "2. Prime the project context:"
+    echo "3. Prime the project context:"
     echo "   /context:create"
 fi
 

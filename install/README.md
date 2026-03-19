@@ -44,9 +44,16 @@ Cursor target:
 curl -o ccpm.bat https://automaze.io/ccpm/install && ccpm.bat --target cursor
 ```
 
+Cursor installs automatically add these CCPM-managed paths to `.gitignore`:
+
+```gitignore
+.cursor/ccpm/
+.cursor/commands/
+```
+
 ## One-liner alternatives
 
-> ⚠️ **Note**: These one-liners don't automatically copy a payload into `.claude/` or `.cursor/`. After cloning, copy either `ccpm/` into `.claude/` or `cursor-ccpm/{commands,ccpm}` into `.cursor/{commands,ccpm}`.
+> ⚠️ **Note**: These one-liners don't automatically copy a payload into `.claude/` or `.cursor/`, and they also won't add the Cursor CCPM paths to `.gitignore`. After cloning, copy either `ccpm/` into `.claude/` or `cursor-ccpm/{commands,ccpm}` into `.cursor/{commands,ccpm}`.
 
 ### Unix/Linux/macOS (direct commands)
 ```bash

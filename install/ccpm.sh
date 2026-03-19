@@ -41,5 +41,5 @@ echo "Installing target '$INSTALL_TARGET'..."
 bash ./project-install.sh "$TARGET_DIR" --target "$INSTALL_TARGET"
 
 echo "Cleaning up..."
-rm -rf .git .gitignore install ccpm cursor-ccpm
+rm -rf .git install ccpm cursor-ccpm
 echo "✅ Installation complete. Repository is now untracked."

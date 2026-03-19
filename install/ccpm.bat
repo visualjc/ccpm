@@ -80,8 +80,12 @@ if /I "%INSTALL_TARGET%"=="claude" (
     if exist cursor-ccpm\ccpm (
         echo Copying cursor ccpm payload to .cursor\ccpm...
         xcopy /E /I /Y cursor-ccpm\ccpm .cursor\ccpm >nul
-        echo ✅ CCPM files installed to .cursor/
     )
+
+    if not exist .gitignore type nul > .gitignore
+    findstr /X /C:".cursor/ccpm/" .gitignore >nul || echo .cursor/ccpm/>>.gitignore
+    findstr /X /C:".cursor/commands/" .gitignore >nul || echo .cursor/commands/>>.gitignore
+    echo ✅ CCPM files installed to .cursor/
 )
 
 echo Cleaning up...
@@ -89,6 +93,5 @@ rmdir /s /q .git 2>nul
 rmdir /s /q install 2>nul
 rmdir /s /q ccpm 2>nul
 rmdir /s /q cursor-ccpm 2>nul
-del /q .gitignore 2>nul
 echo ✅ Installation complete. Repository is now untracked.
 endlocal
