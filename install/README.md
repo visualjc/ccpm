@@ -1,86 +1,48 @@
-# Quick Install
+# Install
 
-Default target: `claude`
+CCPM now ships as a single `skill/ccpm/` package. Install the same skill into the harness-specific skills directory for your project.
 
-## Unix/Linux/macOS
-
-```bash
-curl -sSL https://automaze.io/ccpm/install | bash
-```
-
-Or with wget:
+## Local install from a clone
 
 ```bash
-wget -qO- https://automaze.io/ccpm/install | bash
+git clone https://github.com/visualjc/ccpm.git
+cd ccpm
+./project-install.sh . --target claude
 ```
 
-### Cursor target
+Supported targets:
+- `claude` -> `.claude/skills/ccpm`
+- `cursor` -> `.cursor/skills/ccpm`
+- `codex` -> `skills/ccpm`
+- `openclaw` -> `skills/ccpm`
+- `all` -> all of the above
+
+Examples:
 
 ```bash
-curl -sSL https://automaze.io/ccpm/install | bash -s -- --target cursor
+./project-install.sh /path/to/project --target cursor
+./project-install.sh /path/to/project --target codex
+./project-install.sh /path/to/project --target all
 ```
 
-Or with wget:
+## Bootstrap install scripts
+
+Unix/macOS:
 
 ```bash
-wget -qO- https://automaze.io/ccpm/install | bash -s -- --target cursor
+curl -sSL https://raw.githubusercontent.com/visualjc/ccpm/main/install/ccpm.sh | bash -s -- --target claude
 ```
 
-## Windows (PowerShell)
+Windows:
 
 ```powershell
-iwr -useb https://automaze.io/ccpm/install | iex
+curl -o ccpm.bat https://raw.githubusercontent.com/visualjc/ccpm/main/install/ccpm.bat
+ccpm.bat --target cursor
 ```
 
-Or download and execute:
+## Notes
 
-```powershell
-curl -o ccpm.bat https://automaze.io/ccpm/install && ccpm.bat
-```
-
-Cursor target:
-
-```powershell
-curl -o ccpm.bat https://automaze.io/ccpm/install && ccpm.bat --target cursor
-```
-
-Cursor installs automatically add these CCPM-managed paths to `.gitignore`:
-
-```gitignore
-.cursor/ccpm/
-.cursor/commands/
-```
-
-## One-liner alternatives
-
-> ⚠️ **Note**: These one-liners don't automatically copy a payload into `.claude/` or `.cursor/`, and they also won't add the Cursor CCPM paths to `.gitignore`. After cloning, copy either `ccpm/` into `.claude/` or `cursor-ccpm/{commands,ccpm}` into `.cursor/{commands,ccpm}`.
-
-### Unix/Linux/macOS (direct commands)
-```bash
-git clone https://github.com/automazeio/ccpm.git . && rm -rf .git && cp -r ccpm .claude && rm -rf ccpm cursor-ccpm
-```
-
-### Unix/Linux/macOS (direct commands, Cursor target)
-```bash
-git clone https://github.com/automazeio/ccpm.git . && rm -rf .git && mkdir -p .cursor && cp -r cursor-ccpm/commands .cursor/commands && cp -r cursor-ccpm/ccpm .cursor/ccpm && rm -rf ccpm cursor-ccpm
-```
-
-### Windows (cmd)
-```cmd
-git clone https://github.com/automazeio/ccpm.git . && rmdir /s /q .git && xcopy /E /I /Y ccpm .claude && rmdir /s /q ccpm && rmdir /s /q cursor-ccpm
-```
-
-### Windows (cmd, Cursor target)
-```cmd
-git clone https://github.com/automazeio/ccpm.git . && rmdir /s /q .git && xcopy /E /I /Y cursor-ccpm\commands .cursor\commands && xcopy /E /I /Y cursor-ccpm\ccpm .cursor\ccpm && rmdir /s /q ccpm && rmdir /s /q cursor-ccpm
-```
-
-### Windows (PowerShell)
-```powershell
-git clone https://github.com/automazeio/ccpm.git .; Remove-Item -Recurse -Force .git; Copy-Item -Recurse ccpm .claude; Remove-Item -Recurse -Force ccpm, cursor-ccpm
-```
-
-### Windows (PowerShell, Cursor target)
-```powershell
-git clone https://github.com/automazeio/ccpm.git .; Remove-Item -Recurse -Force .git; New-Item -ItemType Directory -Force .cursor | Out-Null; Copy-Item -Recurse cursor-ccpm\commands .cursor\commands; Copy-Item -Recurse cursor-ccpm\ccpm .cursor\ccpm; Remove-Item -Recurse -Force ccpm, cursor-ccpm
-```
+- The skill install directory is harness-specific.
+- CCPM project data still lives in `.claude/` for every harness.
+- The installer adds the installed skill path to the target repo's `.gitignore`.
+- Run `install/validate-skills-install.sh` from this repo to smoke test all install targets.

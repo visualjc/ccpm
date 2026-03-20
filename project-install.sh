@@ -1,68 +1,65 @@
 #!/bin/bash
-# project-install.sh - Install CCPM into a target project directory
-#
-# Usage:
-#   ./project-install.sh /path/to/your/project
-#   ./project-install.sh . --target cursor
-#
-# This script installs either the Claude or Cursor CCPM payload into
-# the target project.
 
-set -e
+set -euo pipefail
 
-# Get the directory where this script lives (the ccpm repo root)
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-CLAUDE_SOURCE_DIR="$SCRIPT_DIR/ccpm"
-CURSOR_SOURCE_DIR="$SCRIPT_DIR/cursor-ccpm"
+SKILL_SOURCE_DIR="$SCRIPT_DIR/skill/ccpm"
 TARGET_NAME="claude"
 
-# Colors for output
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+NC='\033[0m'
 
 usage() {
-    echo "Usage: $0 <target-directory> [--target claude|cursor]"
+    echo "Usage: $0 <target-directory> [--target claude|cursor|codex|openclaw|all]"
     echo ""
     echo "Examples:"
-    echo "  $0 /path/to/your/project"
+    echo "  $0 . --target claude"
     echo "  $0 . --target cursor"
+    echo "  $0 . --target codex"
+    echo "  $0 . --target all"
 }
 
 confirm_overwrite() {
-    local prompt="$1"
-
-    echo -e "${YELLOW}Warning: ${prompt}${NC}"
-    echo ""
-    read -p "Do you want to overwrite it? (y/N): " -n 1 -r
-    echo ""
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    local path="$1"
+    echo -e "${YELLOW}Warning: ${path} already exists.${NC}"
+    read -r -p "Overwrite it? (y/N): " reply
+    if [[ ! "$reply" =~ ^[Yy]([Ee][Ss])?$ ]]; then
         echo "Installation cancelled."
         exit 0
     fi
 }
 
-copy_dir_contents() {
-    local source_dir="$1"
-    local dest_dir="$2"
-
-    mkdir -p "$dest_dir"
-    cp -R "$source_dir"/. "$dest_dir"/
-}
-
 ensure_gitignore_entry() {
     local gitignore_file="$1"
     local entry="$2"
-
     touch "$gitignore_file"
     if ! grep -Fxq "$entry" "$gitignore_file"; then
-        printf "%s\n" "$entry" >> "$gitignore_file"
+        printf "%s\n" "$entry" >>"$gitignore_file"
     fi
 }
 
-# Check for target directory argument
-if [ -z "$1" ]; then
+install_skill() {
+    local label="$1"
+    local dest_dir="$2"
+    local gitignore_entry="$3"
+
+    if [ -d "$dest_dir" ]; then
+        confirm_overwrite "$dest_dir"
+        rm -rf "$dest_dir"
+    fi
+
+    mkdir -p "$(dirname "$dest_dir")"
+    cp -R "$SKILL_SOURCE_DIR" "$dest_dir"
+    ensure_gitignore_entry "$TARGET_DIR/.gitignore" "$gitignore_entry"
+
+    local file_count
+    file_count=$(find "$dest_dir" -type f | wc -l | tr -d ' ')
+    echo "  ✅ $label -> $dest_dir ($file_count files)"
+}
+
+if [ $# -eq 0 ]; then
     echo -e "${RED}Error: Target directory is required${NC}"
     echo ""
     usage
@@ -75,7 +72,7 @@ shift
 while [ $# -gt 0 ]; do
     case "$1" in
         --target)
-            if [ -z "$2" ]; then
+            if [ -z "${2:-}" ]; then
                 echo -e "${RED}Error: --target requires a value${NC}"
                 exit 1
             fi
@@ -92,108 +89,52 @@ while [ $# -gt 0 ]; do
 done
 
 case "$TARGET_NAME" in
-    claude|cursor)
-        ;;
+    claude|cursor|codex|openclaw|all) ;;
     *)
-        echo -e "${RED}Error: Invalid target '$TARGET_NAME'. Use 'claude' or 'cursor'.${NC}"
+        echo -e "${RED}Error: Invalid target '$TARGET_NAME'. Use claude, cursor, codex, openclaw, or all.${NC}"
         exit 1
         ;;
 esac
 
-# Resolve the target directory (handle . and relative paths)
+if [ ! -d "$SKILL_SOURCE_DIR" ]; then
+    echo -e "${RED}Error: Source skill not found at $SKILL_SOURCE_DIR${NC}"
+    exit 1
+fi
+
 TARGET_DIR="$(cd "$TARGET_INPUT" 2>/dev/null && pwd)" || {
     echo -e "${RED}Error: Target directory does not exist: $TARGET_INPUT${NC}"
     exit 1
 }
 
-if [ "$TARGET_NAME" = "claude" ]; then
-    if [ ! -d "$CLAUDE_SOURCE_DIR" ]; then
-        echo -e "${RED}Error: Source directory not found: $CLAUDE_SOURCE_DIR${NC}"
-        echo "Make sure you're running this script from the ccpm repository root."
-        exit 1
-    fi
+echo "Installing CCPM into $TARGET_DIR"
 
-    if [ -d "$TARGET_DIR/.claude" ]; then
-        confirm_overwrite ".claude/ already exists in $TARGET_DIR"
-        echo "Removing existing .claude/ directory..."
-        rm -rf "$TARGET_DIR/.claude"
-    fi
-
-    echo "Installing CCPM target 'claude' to $TARGET_DIR/.claude/..."
-    cp -R "$CLAUDE_SOURCE_DIR" "$TARGET_DIR/.claude"
-
-    if [ ! -d "$TARGET_DIR/.claude" ]; then
-        echo -e "${RED}Error: Installation failed - .claude/ was not created${NC}"
-        exit 1
-    fi
-
-    FILE_COUNT=$(find "$TARGET_DIR/.claude" -type f | wc -l | tr -d ' ')
-
-    echo ""
-    echo -e "${GREEN}✅ CCPM installed successfully!${NC}"
-    echo ""
-    echo "Installed $FILE_COUNT files to: $TARGET_DIR/.claude/"
-    echo ""
-    echo -e "${YELLOW}Next steps:${NC}"
-    echo "1. Copy and customize configuration files:"
-    echo "   cd $TARGET_DIR/.claude"
-    echo "   cp .ccpmrc.example .ccpmrc"
-    echo "   cp settings.json.example settings.json"
-    echo ""
-    echo "2. Add .claude/ to .gitignore (recommended for team projects):"
-    echo "   echo '.claude/' >> $TARGET_DIR/.gitignore"
-    echo ""
-    echo "3. Initialize the PM system:"
-    echo "   /pm:init"
-    echo ""
-    echo "4. Create your CLAUDE.md file:"
-    echo "   /init include rules from .claude/CLAUDE.md"
-else
-    if [ ! -d "$CURSOR_SOURCE_DIR" ]; then
-        echo -e "${RED}Error: Source directory not found: $CURSOR_SOURCE_DIR${NC}"
-        echo "Make sure you're running this script from the ccpm repository root."
-        exit 1
-    fi
-
-    CURSOR_COMMANDS_DIR="$TARGET_DIR/.cursor/commands"
-    CURSOR_CCPM_DIR="$TARGET_DIR/.cursor/ccpm"
-
-    if [ -d "$CURSOR_COMMANDS_DIR" ] || [ -d "$CURSOR_CCPM_DIR" ]; then
-        confirm_overwrite ".cursor/commands and/or .cursor/ccpm already exist in $TARGET_DIR"
-        echo "Removing existing CCPM-managed Cursor paths..."
-        rm -rf "$CURSOR_COMMANDS_DIR" "$CURSOR_CCPM_DIR"
-    fi
-
-    echo "Installing CCPM target 'cursor' to $TARGET_DIR/.cursor/..."
-    copy_dir_contents "$CURSOR_SOURCE_DIR/commands" "$CURSOR_COMMANDS_DIR"
-    copy_dir_contents "$CURSOR_SOURCE_DIR/ccpm" "$CURSOR_CCPM_DIR"
-
-    if [ ! -d "$CURSOR_COMMANDS_DIR" ] || [ ! -d "$CURSOR_CCPM_DIR" ]; then
-        echo -e "${RED}Error: Installation failed - Cursor CCPM paths were not created${NC}"
-        exit 1
-    fi
-
-    ensure_gitignore_entry "$TARGET_DIR/.gitignore" ".cursor/ccpm/"
-    ensure_gitignore_entry "$TARGET_DIR/.gitignore" ".cursor/commands/"
-
-    FILE_COUNT=$(find "$TARGET_DIR/.cursor" -type f | wc -l | tr -d ' ')
-
-    echo ""
-    echo -e "${GREEN}✅ CCPM installed successfully!${NC}"
-    echo ""
-    echo "Installed $FILE_COUNT files to: $TARGET_DIR/.cursor/"
-    echo ""
-    echo -e "${YELLOW}Next steps:${NC}"
-    echo "1. Added CCPM-managed Cursor paths to .gitignore:"
-    echo "   .cursor/ccpm/"
-    echo "   .cursor/commands/"
-    echo ""
-    echo "2. Initialize the PM system:"
-    echo "   /pm:init"
-    echo ""
-    echo "3. Prime the project context:"
-    echo "   /context:create"
-fi
+case "$TARGET_NAME" in
+    claude)
+        install_skill "Claude Code" "$TARGET_DIR/.claude/skills/ccpm" ".claude/skills/ccpm/"
+        ;;
+    cursor)
+        install_skill "Cursor" "$TARGET_DIR/.cursor/skills/ccpm" ".cursor/skills/ccpm/"
+        ;;
+    codex)
+        install_skill "Codex" "$TARGET_DIR/skills/ccpm" "skills/ccpm/"
+        ;;
+    openclaw)
+        install_skill "OpenClaw" "$TARGET_DIR/skills/ccpm" "skills/ccpm/"
+        ;;
+    all)
+        install_skill "Claude Code" "$TARGET_DIR/.claude/skills/ccpm" ".claude/skills/ccpm/"
+        install_skill "Cursor" "$TARGET_DIR/.cursor/skills/ccpm" ".cursor/skills/ccpm/"
+        install_skill "Codex/OpenClaw" "$TARGET_DIR/skills/ccpm" "skills/ccpm/"
+        ;;
+esac
 
 echo ""
-echo "For more information, see: https://github.com/automazeio/ccpm"
+echo -e "${GREEN}✅ CCPM installed successfully${NC}"
+echo ""
+echo "Important:"
+echo "- The skill install location is harness-specific."
+echo "- CCPM project data still lives in .claude/ inside the target project."
+echo "- See MIGRATION.md and UPSTREAM_SYNC.md in this repo for transition details."
+echo ""
+echo "Suggested next step:"
+echo "- Ask your harness to use the installed 'ccpm' skill, then say: \"create project context\" or \"I want to build X\""

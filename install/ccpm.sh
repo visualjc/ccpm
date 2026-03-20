@@ -1,10 +1,16 @@
 #!/bin/bash
 
-set -e
+set -euo pipefail
 
-REPO_URL="https://github.com/automazeio/ccpm.git"
-TARGET_DIR="."
+REPO_URL="https://github.com/visualjc/ccpm.git"
 INSTALL_TARGET="claude"
+WORKDIR="$(pwd)"
+TMP_DIR="$(mktemp -d)"
+
+cleanup() {
+    rm -rf "$TMP_DIR"
+}
+trap cleanup EXIT
 
 while [ $# -gt 0 ]; do
     case "$1" in
@@ -18,28 +24,23 @@ while [ $# -gt 0 ]; do
             ;;
         *)
             echo "Error: Unknown argument: $1"
-            echo "Usage: bash -s -- [--target claude|cursor]"
+            echo "Usage: bash -s -- [--target claude|cursor|codex|openclaw|all]"
             exit 1
             ;;
     esac
 done
 
 case "$INSTALL_TARGET" in
-    claude|cursor)
-        ;;
+    claude|cursor|codex|openclaw|all) ;;
     *)
-        echo "Error: Invalid target '$INSTALL_TARGET'. Use 'claude' or 'cursor'."
+        echo "Error: Invalid target '$INSTALL_TARGET'. Use claude, cursor, codex, openclaw, or all."
         exit 1
         ;;
 esac
 
 echo "Cloning repository from $REPO_URL..."
-git clone "$REPO_URL" "$TARGET_DIR"
+git clone --depth 1 "$REPO_URL" "$TMP_DIR/repo"
 
-echo "Clone successful."
-echo "Installing target '$INSTALL_TARGET'..."
-bash ./project-install.sh "$TARGET_DIR" --target "$INSTALL_TARGET"
-
-echo "Cleaning up..."
-rm -rf .git install ccpm cursor-ccpm
-echo "✅ Installation complete. Repository is now untracked."
+echo "Installing target '$INSTALL_TARGET' into $WORKDIR..."
+bash "$TMP_DIR/repo/project-install.sh" "$WORKDIR" --target "$INSTALL_TARGET"
+echo "✅ Installation complete."

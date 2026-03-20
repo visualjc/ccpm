@@ -1,5 +1,26 @@
 # CCPM Changelog
 
+## [2026-03-19] - Skills-First Fork Migration
+
+### Changed
+- rebased the fork onto upstream's single `skill/ccpm/` layout
+- removed legacy Claude/Cursor payload trees from `main`
+- added project-local installers for Claude Code, Cursor, Codex, OpenClaw, and `all`
+- preserved context and testing workflows as additional references inside the single skill
+
+### Added
+- `skill/ccpm/references/context.md`
+- `skill/ccpm/references/testing.md`
+- `skill/ccpm/references/scripts/test-and-log.sh`
+- `MIGRATION.md`
+- `UPSTREAM_SYNC.md`
+- `install/validate-skills-install.sh`
+
+### Notes
+- CCPM project data remains under `.claude/` across all harnesses
+- the pre-migration layout is preserved locally via the `legacy-pre-skills-layout` tag and `codex/legacy-pre-skills-layout` branch
+- warning on `visualjc/ccpm` or `automazeio/ccpm` as origin is intentional because both repos are treated as template sources
+
 ## [2025-01-24] - Major Cleanup & Issue Resolution Release
 
 ### 🎯 Overview
