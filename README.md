@@ -139,6 +139,8 @@ Review the dry-run output, then apply the migration:
 bash skill/ccpm/references/scripts/migrate-layout.sh --apply
 ```
 
+Duplicate hidden epics that collide with an active nested epic are quarantined under the legacy hidden root's `.archived/duplicate-name-conflicts/` path so they no longer interfere with active epic resolution.
+
 The pre-migration layout is preserved locally via:
 - tag: `legacy-pre-skills-layout`
 - branch: `codex/legacy-pre-skills-layout`

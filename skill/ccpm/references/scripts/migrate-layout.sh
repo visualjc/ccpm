@@ -86,6 +86,33 @@ move_dir_children_safe() {
   cleanup_if_empty "$src_dir"
 }
 
+quarantine_legacy_epic_conflict() {
+  local src_dir legacy_root epic_name conflict_path archive_dir
+  src_dir="$1"
+  legacy_root="$2"
+  epic_name="$3"
+  conflict_path="$4"
+  archive_dir="$legacy_root/.archived/duplicate-name-conflicts/$epic_name"
+
+  if [ "$src_dir" = "$archive_dir" ]; then
+    printf 'SKIP duplicate epic quarantine already active: %s (active epic at %s)\n' "$epic_name" "$conflict_path"
+    return 0
+  fi
+
+  if [ -e "$archive_dir" ]; then
+    printf 'SKIP duplicate epic quarantine conflict: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
+    return 0
+  fi
+
+  if $APPLY; then
+    mkdir -p "$(dirname "$archive_dir")"
+    mv "$src_dir" "$archive_dir"
+    printf 'QUARANTINED duplicate epic: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
+  else
+    printf 'WOULD QUARANTINE duplicate epic: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
+  fi
+}
+
 epic_name_conflict_exists() {
   local epic_name current_path epic_dir
   epic_name="$1"
@@ -114,8 +141,15 @@ normalize_nested_epic_dirs() {
 
     while IFS= read -r -d '' child; do
       name="$(basename "$child")"
-      ccpm_is_numeric_task_filename "$name" || continue
-      move_file_safe "$child" "$epic_dir/issues/$name"
+      case "$name" in
+        [0-9]*-analysis.md)
+          move_file_safe "$child" "$epic_dir/$name"
+          ;;
+        *.md)
+          ccpm_is_numeric_task_filename "$name" || continue
+          move_file_safe "$child" "$epic_dir/issues/$name"
+          ;;
+      esac
     done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
   done < <(find "$PRD_DIR" -path '*/epics/*' -type d -print0 2>/dev/null | sort -z)
 }
@@ -201,7 +235,7 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
     target_epic_dir="$PRD_DIR/$prd_name/epics/$epic_name"
     conflict_path="$(epic_name_conflict_exists "$epic_name" "$epic_dir" || true)"
     if [ -n "$conflict_path" ] && [ "$conflict_path" != "$target_epic_dir" ]; then
-      printf 'SKIP duplicate epic name: %s already exists at %s\n' "$epic_name" "$conflict_path"
+      quarantine_legacy_epic_conflict "$epic_dir" "$legacy_epic_root" "$epic_name" "$conflict_path"
       continue
     fi
 
@@ -217,12 +251,12 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
         updates)
           move_dir_children_safe "$child" "$target_epic_dir/updates"
           ;;
+        [0-9]*-analysis.md)
+          move_file_safe "$child" "$target_epic_dir/$name"
+          ;;
         *.md)
           ccpm_is_numeric_task_filename "$name" || continue
           move_file_safe "$child" "$target_epic_dir/issues/$name"
-          ;;
-        [0-9]*-analysis.md)
-          move_file_safe "$child" "$target_epic_dir/$name"
           ;;
       esac
     done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null | sort -z)
