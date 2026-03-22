@@ -133,6 +133,12 @@ For older repos with `.claude/prds` and `.claude/epics`, run:
 bash skill/ccpm/references/scripts/migrate-layout.sh
 ```
 
+Review the dry-run output, then apply the migration:
+
+```bash
+bash skill/ccpm/references/scripts/migrate-layout.sh --apply
+```
+
 The pre-migration layout is preserved locally via:
 - tag: `legacy-pre-skills-layout`
 - branch: `codex/legacy-pre-skills-layout`

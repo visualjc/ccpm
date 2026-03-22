@@ -86,6 +86,40 @@ move_dir_children_safe() {
   cleanup_if_empty "$src_dir"
 }
 
+epic_name_conflict_exists() {
+  local epic_name current_path epic_dir
+  epic_name="$1"
+  current_path="$2"
+
+  while IFS= read -r epic_dir; do
+    [ -n "$epic_dir" ] || continue
+    [ "$epic_dir" = "$current_path" ] && continue
+    if [ "$(basename "$epic_dir")" = "$epic_name" ]; then
+      printf '%s\n' "$epic_dir"
+      return 0
+    fi
+  done < <(ccpm_list_epic_dirs)
+
+  return 1
+}
+
+normalize_nested_epic_dirs() {
+  local epic_dir child name
+
+  [ -d "$PRD_DIR" ] || return 0
+
+  while IFS= read -r -d '' epic_dir; do
+    [ -f "$epic_dir/epic.md" ] || continue
+    ensure_dir "$epic_dir/issues"
+
+    while IFS= read -r -d '' child; do
+      name="$(basename "$child")"
+      ccpm_is_numeric_task_filename "$name" || continue
+      move_file_safe "$child" "$epic_dir/issues/$name"
+    done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
+  done < <(find "$PRD_DIR" -path '*/epics/*' -type d -print0 2>/dev/null | sort -z)
+}
+
 normalize_prd_reference() {
   local ref configured_prd_dir
   ref="$1"
@@ -138,6 +172,8 @@ echo "Mode: $([ "$APPLY" = true ] && echo apply || echo dry-run)"
 echo "Target PRD root: $PRD_DIR"
 echo ""
 
+normalize_nested_epic_dirs
+
 while IFS= read -r -d '' prd_file; do
   prd_name="$(basename "$prd_file" .md)"
   move_file_safe "$prd_file" "$PRD_DIR/$prd_name/prd.md"
@@ -158,11 +194,17 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
     epic_name="$(basename "$epic_dir")"
     prd_name="$(resolve_prd_name_for_legacy_epic "$epic_dir" 2>/dev/null || true)"
     if [ -z "$prd_name" ]; then
-      printf 'SKIP unmatched legacy epic: %s\n' "$epic_name"
+      printf 'SKIP unmatched legacy epic: %s (no prd: link and no matching PRD name; add prd: metadata or create/move the target PRD first)\n' "$epic_name"
       continue
     fi
 
     target_epic_dir="$PRD_DIR/$prd_name/epics/$epic_name"
+    conflict_path="$(epic_name_conflict_exists "$epic_name" "$epic_dir" || true)"
+    if [ -n "$conflict_path" ] && [ "$conflict_path" != "$target_epic_dir" ]; then
+      printf 'SKIP duplicate epic name: %s already exists at %s\n' "$epic_name" "$conflict_path"
+      continue
+    fi
+
     ensure_dir "$target_epic_dir"
     ensure_dir "$target_epic_dir/issues"
 
@@ -175,7 +217,8 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
         updates)
           move_dir_children_safe "$child" "$target_epic_dir/updates"
           ;;
-        [0-9]*.md)
+        *.md)
+          ccpm_is_numeric_task_filename "$name" || continue
           move_file_safe "$child" "$target_epic_dir/issues/$name"
           ;;
         [0-9]*-analysis.md)

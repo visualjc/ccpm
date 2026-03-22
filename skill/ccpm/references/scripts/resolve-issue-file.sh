@@ -9,13 +9,18 @@ fi
 
 ISSUE_NUM="$1"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-PRD_DIR="$("$SCRIPT_DIR/resolve-prd-dir.sh" 2>/dev/null || true)"
+PRD_DIR="$("$SCRIPT_DIR/resolve-prd-dir.sh" --allow-missing 2>/dev/null || true)"
 
 if [ -n "$PRD_DIR" ] && [ -d "$PRD_DIR" ]; then
   while IFS= read -r -d '' issue_file; do
     printf '%s\n' "$issue_file"
     exit 0
   done < <(find "$PRD_DIR" -path "*/issues/$ISSUE_NUM.md" -type f -print0 2>/dev/null | sort -z)
+
+  while IFS= read -r -d '' issue_file; do
+    printf '%s\n' "$issue_file"
+    exit 0
+  done < <(find "$PRD_DIR" -path "*/epics/*/$ISSUE_NUM.md" -type f -print0 2>/dev/null | sort -z)
 fi
 
 for legacy_root in ".claude/epics" ".cursor/ccpm/epics"; do

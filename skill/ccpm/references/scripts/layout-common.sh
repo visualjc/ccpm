@@ -44,6 +44,17 @@ ccpm_epic_prd_name_from_dir() {
   fi
 }
 
+ccpm_is_numeric_task_filename() {
+  case "$1" in
+    ''|*-analysis.md)
+      return 1
+      ;;
+    *)
+      [[ "$1" =~ ^[0-9]+\.md$ ]]
+      ;;
+  esac
+}
+
 ccpm_epic_is_archived() {
   case "$1" in
     */epics/.archived/*|.claude/epics/archived/*|.cursor/ccpm/epics/archived/*)
@@ -134,8 +145,9 @@ ccpm_list_task_files_for_epic() {
   fi
 
   while IFS= read -r -d '' task_file; do
+    ccpm_is_numeric_task_filename "$(basename "$task_file")" || continue
     printf '%s\n' "$task_file"
-  done < <(find "$task_root" -mindepth 1 -maxdepth 1 -type f -name '[0-9]*.md' -print0 2>/dev/null | sort -z)
+  done < <(find "$task_root" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
 }
 
 ccpm_list_task_files() {
