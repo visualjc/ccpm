@@ -143,7 +143,8 @@ normalize_nested_epic_dirs() {
       name="$(basename "$child")"
       case "$name" in
         [0-9]*-analysis.md)
-          move_file_safe "$child" "$epic_dir/$name"
+          # Old nested layouts already keep analysis files at epic root.
+          continue
           ;;
         *.md)
           ccpm_is_numeric_task_filename "$name" || continue
