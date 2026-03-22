@@ -22,7 +22,7 @@ CCPM gives your agent a repo-backed delivery workflow:
 - preserve project context in `.claude/context/`
 - detect and run tests through `.claude/testing-config.md`
 
-The installed skill location is harness-specific, but CCPM project state always lives in `.claude/` at the project root.
+The installed skill location is harness-specific. Planning artifacts live under `docs/prds/` by default, while CCPM config/context/testing state lives under `.claude/` at the project root.
 
 ## Install
 
@@ -103,9 +103,18 @@ skill/ccpm/
 Project data layout:
 
 ```text
+docs/prds/
+└── <prd-name>/
+    ├── prd.md
+    └── epics/
+        └── <epic-name>/
+            ├── epic.md
+            ├── issues/
+            ├── updates/
+            └── github-mapping.md
+
 .claude/
-├── prds/
-├── epics/
+├── .ccpmrc
 ├── context/
 └── testing-config.md
 ```
@@ -117,6 +126,12 @@ This fork retires the old `/pm:*` payload model in favor of the single installed
 See:
 - [MIGRATION.md](MIGRATION.md)
 - [UPSTREAM_SYNC.md](UPSTREAM_SYNC.md)
+
+For older repos with `.claude/prds` and `.claude/epics`, run:
+
+```bash
+bash skill/ccpm/references/scripts/migrate-layout.sh
+```
 
 The pre-migration layout is preserved locally via:
 - tag: `legacy-pre-skills-layout`

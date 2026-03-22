@@ -1,4 +1,9 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
 
 query="$1"
 
@@ -17,12 +22,12 @@ echo "================================"
 echo ""
 
 # Search in PRDs
-if [ -d ".claude/prds" ]; then
+if [ -n "$(ccpm_list_prd_files)" ]; then
   echo "📄 PRDs:"
-  results=$(grep -l -i "$query" .claude/prds/*.md 2>/dev/null)
+  results="$(ccpm_list_prd_files | xargs grep -l -i "$query" 2>/dev/null || true)"
   if [ -n "$results" ]; then
     for file in $results; do
-      name=$(basename "$file" .md)
+      name=$(ccpm_prd_name_from_path "$file")
       matches=$(grep -c -i "$query" "$file")
       echo "  • $name ($matches matches)"
     done
@@ -33,9 +38,9 @@ if [ -d ".claude/prds" ]; then
 fi
 
 # Search in Epics
-if [ -d ".claude/epics" ]; then
+if [ -n "$(ccpm_list_epic_dirs)" ]; then
   echo "📚 Epics:"
-  results=$(find .claude/epics -name "epic.md" -exec grep -l -i "$query" {} \; 2>/dev/null)
+  results=$(ccpm_list_epic_dirs | while IFS= read -r dir; do grep -l -i "$query" "$dir/epic.md" 2>/dev/null || true; done)
   if [ -n "$results" ]; then
     for file in $results; do
       epic_name=$(basename $(dirname "$file"))
@@ -49,12 +54,12 @@ if [ -d ".claude/epics" ]; then
 fi
 
 # Search in Tasks
-if [ -d ".claude/epics" ]; then
+if [ -n "$(ccpm_list_task_files)" ]; then
   echo "📝 Tasks:"
-  results=$(find .claude/epics -name "[0-9]*.md" -exec grep -l -i "$query" {} \; 2>/dev/null | head -10)
+  results=$(ccpm_list_task_files | xargs grep -l -i "$query" 2>/dev/null | head -10 || true)
   if [ -n "$results" ]; then
     for file in $results; do
-      epic_name=$(basename $(dirname "$file"))
+      epic_name=$(basename "$(ccpm_epic_dir_from_task_file "$file")")
       task_num=$(basename "$file" .md)
       echo "  • Task #$task_num in $epic_name"
     done
@@ -64,7 +69,13 @@ if [ -d ".claude/epics" ]; then
 fi
 
 # Summary
-total=$(find .claude -name "*.md" -exec grep -l -i "$query" {} \; 2>/dev/null | wc -l)
+total=$(
+  {
+    ccpm_list_prd_files
+    ccpm_list_epic_dirs | while IFS= read -r dir; do printf '%s\n' "$dir/epic.md"; done
+    ccpm_list_task_files
+  } | xargs grep -l -i "$query" 2>/dev/null | wc -l | tr -d '[:space:]'
+)
 echo ""
 echo "📊 Total files with matches: $total"
 

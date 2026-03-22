@@ -9,28 +9,34 @@ A spec-driven development workflow: PRD → Epic → GitHub Issues → Parallel 
 
 ## Core Philosophy
 
-Requirements live in files, not heads. Every feature starts as a PRD, becomes a technical epic, decomposes into GitHub issues, and gets executed by parallel agents with full traceability.
+Requirements live in repo-visible files, not hidden tooling folders. PRDs, epics, issues, analyses, and updates should live under the configured planning root, while `.claude/` is reserved for CCPM config, context, and testing metadata.
 
 ## File Conventions
 
-Before doing anything, read `references/conventions.md` for path standards, frontmatter schemas, and GitHub operation rules. These apply to all phases.
+Before doing anything, read `references/conventions.md` for storage paths, frontmatter schemas, and GitHub operation rules. These apply to all phases.
 
 ## Project Data Convention
 
 This skill may be installed into different harness-specific skill directories such as `.claude/skills/ccpm`, `.cursor/skills/ccpm`, or `skills/ccpm`.
 
-Regardless of where the skill itself is installed, CCPM stores its project state in `.claude/` at the project root:
-- `.claude/prds/`
-- `.claude/epics/`
-- `.claude/context/`
-- `.claude/testing-config.md`
+Regardless of where the skill itself is installed:
+- planning artifacts live under `PRD_DIR`, defaulting to `docs/prds/`
+- CCPM config remains in `.claude/.ccpmrc`
+- context remains in `.claude/context/`
+- testing config remains in `.claude/testing-config.md`
+
+Use the resolver scripts under `references/scripts/` instead of hardcoding planning paths:
+- `resolve-prd-dir.sh`
+- `resolve-prd-path.sh`
+- `resolve-epic-dir.sh`
+- `resolve-issue-file.sh`
 
 ## The Five Phases
 
 ### 1. Plan — Capture requirements
 **When**: User wants to define a new feature, product requirement, or scope of work.
 **Read**: `references/plan.md`
-**Covers**: Writing PRDs through guided brainstorming, converting PRDs to technical epics.
+**Covers**: Writing PRDs through guided brainstorming, converting PRDs to one or more technical epics.
 
 ### 2. Structure — Break it down
 **When**: An epic exists and needs to be decomposed into concrete tasks.
@@ -40,12 +46,12 @@ Regardless of where the skill itself is installed, CCPM stores its project state
 ### 3. Sync — Push to GitHub
 **When**: Local epic/tasks need to become GitHub issues, progress needs to be posted as comments, or a bug is found and needs a linked issue created.
 **Read**: `references/sync.md`
-**Covers**: Epic sync (epic + tasks → GitHub issues), issue sync (progress comments), closing issues/epics, bug reporting against completed issues.
+**Covers**: Epic sync, issue sync, closing issues/epics, bug reporting against completed issues.
 
 ### 4. Execute — Start building
 **When**: User wants to start working on one or more GitHub issues with parallel agents.
 **Read**: `references/execute.md`
-**Covers**: Issue analysis (parallel work stream identification), launching parallel agents, coordinating worktrees.
+**Covers**: Issue analysis, launching parallel agents, coordinating worktrees.
 
 ### 5. Track — Know where things stand
 **When**: User asks for status, standup report, what's blocked, what's next, or needs to validate state.
@@ -84,6 +90,7 @@ For deterministic operations — anything that reads and reports without needing
 | What's next | `bash references/scripts/next.sh` |
 | What's blocked | `bash references/scripts/blocked.sh` |
 | Validate project state | `bash references/scripts/validate.sh` |
+| Migrate from legacy `.claude` layout | `bash references/scripts/migrate-layout.sh [--apply]` |
 | Run a specific test with log capture | `bash references/scripts/test-and-log.sh <test_target> [log_name]` |
 
 Use the LLM for work that requires reasoning: writing PRDs, analyzing parallelism, launching agents, synthesizing updates.
@@ -95,6 +102,7 @@ Use the LLM for work that requires reasoning: writing PRDs, analyzing parallelis
 ```
 Plan a feature:     "I want to build X" or "create a PRD for X"
 Parse to epic:      "turn the X PRD into an epic"
+Parse to named epic:"turn the X PRD into the Y epic"
 Decompose:          "break down the X epic into tasks"
 Sync to GitHub:     "push the X epic to GitHub"
 Start an issue:     "start working on issue 42"
@@ -107,4 +115,5 @@ Refresh context:    "update project context"
 Prime context:      "prime context for this repo"
 Prime testing:      "figure out this repo's test setup"
 Run tests:          "run the auth tests" / "run pytest for api/tests/test_users.py"
+Migrate layout:     "migrate the planning layout"
 ```

@@ -1,10 +1,18 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
+
 echo "Getting epics..."
 echo ""
 echo ""
 
-[ ! -d ".claude/epics" ] && echo "📁 No epics directory found. Ask CCPM: parse the <feature-name> PRD" && exit 0
-[ -z "$(ls -d .claude/epics/*/ 2>/dev/null)" ] && echo "📁 No epics found. Ask CCPM: parse the <feature-name> PRD" && exit 0
+if [ -z "$(ccpm_list_epic_dirs)" ]; then
+  echo "📁 No epics found. Ask CCPM: parse the <feature-name> PRD"
+  exit 0
+fi
 
 echo "📚 Project Epics"
 echo "================"
@@ -16,8 +24,8 @@ in_progress_epics=""
 completed_epics=""
 
 # Process all epics
-for dir in .claude/epics/*/; do
-  [ -d "$dir" ] || continue
+while IFS= read -r dir; do
+  [ -n "$dir" ] || continue
   [ -f "$dir/epic.md" ] || continue
 
   # Extract metadata
@@ -31,14 +39,14 @@ for dir in .claude/epics/*/; do
   [ -z "$p" ] && p="0%"
 
   # Count tasks
-  t=$(ls "$dir"/[0-9]*.md 2>/dev/null | wc -l)
+  t=$(ccpm_list_task_files_for_epic "$dir" | wc -l | tr -d '[:space:]')
 
   # Format output with GitHub issue number if available
   if [ -n "$g" ]; then
     i=$(echo "$g" | grep -o '/[0-9]*$' | tr -d '/')
-    entry="   📋 ${dir}epic.md (#$i) - $p complete ($t tasks)"
+    entry="   📋 ${dir}/epic.md (#$i) - $p complete ($t tasks)"
   else
-    entry="   📋 ${dir}epic.md - $p complete ($t tasks)"
+    entry="   📋 ${dir}/epic.md - $p complete ($t tasks)"
   fi
 
   # Categorize by status (handle various status values)
@@ -57,7 +65,7 @@ for dir in .claude/epics/*/; do
       planning_epics="${planning_epics}${entry}\n"
       ;;
   esac
-done
+done < <(ccpm_list_epic_dirs)
 
 # Display categorized epics
 echo "📝 Planning:"
@@ -86,8 +94,8 @@ fi
 # Summary
 echo ""
 echo "📊 Summary"
-total=$(ls -d .claude/epics/*/ 2>/dev/null | wc -l)
-tasks=$(find .claude/epics -name "[0-9]*.md" 2>/dev/null | wc -l)
+total=$(ccpm_list_epic_dirs | wc -l | tr -d '[:space:]')
+tasks=$(ccpm_list_task_files | wc -l | tr -d '[:space:]')
 echo "   Total epics: $total"
 echo "   Total tasks: $tasks"
 

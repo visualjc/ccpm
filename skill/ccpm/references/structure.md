@@ -9,41 +9,21 @@ This phase converts a technical epic into concrete, numbered task files with dep
 **Trigger**: User wants to break an epic into actionable tasks.
 
 ### Preflight
-- Verify `.claude/epics/<name>/epic.md` exists with valid frontmatter.
-- If numbered task files (001.md, 002.md...) already exist in the epic directory, list them and confirm deletion before recreating.
-- If epic status is "completed", warn the user before proceeding.
+- Resolve the epic with `bash references/scripts/resolve-epic-dir.sh <epic-name>`.
+- Use `<epic-dir>/issues/` as the canonical task directory.
+- If numbered task files already exist in `issues/` or legacy epic root, list them and confirm deletion before recreating.
+- If the epic is completed, warn before proceeding.
 
 ### Process
 
-Read the epic fully. Analyze for parallelism — which pieces of work can happen simultaneously without file conflicts?
+Read the epic fully. Analyze which work can happen simultaneously without file conflicts.
 
-**Task types to consider:**
-- Setup: environment, scaffolding, dependencies
-- Data: models, schemas, migrations
-- API: endpoints, services, integration
-- UI: components, pages, styling
-- Tests: unit, integration, e2e
-- Docs: README, API docs, changelogs
+Create task files as:
+- `<epic-dir>/issues/001.md`
+- `<epic-dir>/issues/002.md`
+- ...
 
-**Parallelization strategy by epic size:**
-- Small (<5 tasks): create sequentially
-- Medium (5–10 tasks): batch into 2–3 groups, spawn parallel Task agents
-- Large (>10 tasks): analyze dependencies first, launch parallel agents (max 5 concurrent), create dependent tasks after prerequisites
-
-For parallel creation, use the Task tool:
-```yaml
-Task:
-  description: "Create task files batch N"
-  subagent_type: "general-purpose"
-  prompt: |
-    Create task files for epic: <name>
-    Tasks to create: [list 3-4 tasks]
-    Save to: .claude/epics/<name>/001.md, 002.md, etc.
-    Follow the task file format exactly.
-    Return: list of files created.
-```
-
-### Task File Format
+Task file format:
 
 ```markdown
 ---
@@ -78,11 +58,15 @@ conflicts_with: []
 - [ ] Code reviewed
 ```
 
-**Numbering**: sequential 001.md, 002.md, etc. Tasks are renamed to GitHub issue numbers after sync — do not hard-code dependencies by filename, use the `depends_on` array.
+### Parallelization Strategy
+
+- Small epic: create sequentially
+- Medium epic: batch into 2–3 groups
+- Large epic: analyze dependencies first, then parallelize
 
 ### After Creating All Tasks
 
-Append a summary to the epic file:
+Append a summary to `<epic-dir>/epic.md`:
 
 ```markdown
 ## Tasks Created
@@ -95,12 +79,4 @@ Sequential tasks: N
 Estimated total effort: N hours
 ```
 
-**After completion**: Confirm "✅ Created N tasks for epic: <name>" and suggest: "Ready to push to GitHub? Say: sync the <name> epic"
-
----
-
-## Dependency Rules
-- `depends_on` lists task numbers that must complete before this task can start.
-- `parallel: true` means the task can run concurrently with others it doesn't conflict with.
-- `conflicts_with` lists tasks that touch the same files — these cannot run in parallel.
-- Circular dependencies are an error — check before finalizing.
+**After completion**: Confirm the resolved `issues/` path and suggest syncing the epic to GitHub.

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 
 echo "Initializing..."
 echo ""
@@ -66,11 +67,18 @@ fi
 # Create directory structure
 echo ""
 echo "📁 Creating directory structure..."
-mkdir -p .claude/prds
-mkdir -p .claude/epics
+mkdir -p .claude
+mkdir -p docs/prds
 mkdir -p .claude/rules
 mkdir -p .claude/agents
 mkdir -p .claude/scripts/pm
+if [ ! -f ".claude/.ccpmrc" ]; then
+  cat > .claude/.ccpmrc <<'EOF'
+PRD_DIR=docs/prds
+EPIC_STORAGE=nested
+EOF
+  echo "  ✅ Created .claude/.ccpmrc"
+fi
 echo "  ✅ Directories created"
 
 # Copy scripts if in main repo
@@ -184,6 +192,7 @@ echo "  Auth: $(gh auth status 2>&1 | grep -o 'Logged in to [^ ]*' || echo 'Not 
 echo ""
 echo "🎯 Next Steps:"
 echo "  1. Ask CCPM: I want to build <feature-name>"
+echo "  2. Ask CCPM: migrate the planning layout (if this repo already has .claude PRDs/epics)"
 echo "  2. Ask CCPM: what can you do?"
 echo "  3. Ask CCPM: what's our status?"
 echo ""
