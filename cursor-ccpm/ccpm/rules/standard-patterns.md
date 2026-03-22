@@ -63,7 +63,7 @@ Next: {Single suggested action}
 ### Check and Create
 ```markdown
 # Don't ask permission, just create what's needed
-mkdir -p .cursor/ccpm/{directory} 2>/dev/null
+mkdir -p docs/prds/{feature}/epics/{epic}/issues 2>/dev/null
 ```
 
 ### Read with Fallback
@@ -81,9 +81,13 @@ fi
 # Resolve PRD directory (repo-relative)
 PRD_DIR=$(.cursor/ccpm/scripts/pm/resolve-prd-dir.sh 2>/dev/null)
 
-# If empty (no env/config), prompt once in interactive flows (e.g., prd-new):
-# 1) .cursor/ccpm/prds (default), 2) docs/prds, 3) custom
-# Persist choice to .cursor/ccpm/.ccpmrc as PRD_DIR and create the directory.
+# Resolve PRD and epic paths through scripts, not hardcoded directories:
+PRD_PATH=$(.cursor/ccpm/scripts/pm/resolve-prd-path.sh {prd_name})
+EPIC_DIR=$(.cursor/ccpm/scripts/pm/resolve-epic-dir.sh {epic_name})
+
+# New default for installs/init is docs/prds.
+# Legacy fallback still supports .cursor/ccpm/prds and .claude/prds.
+# Persist settings in .claude/.ccpmrc.
 ```
 
 ## GitHub Operations

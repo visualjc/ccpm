@@ -8,6 +8,7 @@
 # PRD_DIR=docs/prds
 
 PRD_DIR=docs/prds
+EPIC_STORAGE=nested
 
 # === Workflow Mode Configuration ===
 # Control parallel execution and worktree usage for human-in-the-loop vs agentic workflows
@@ -45,7 +46,6 @@ WORKTREE_MODE=true
 #   PARALLEL_MODE=false
 #   WORKTREE_MODE=true
 #   → Separate worktree, but you control each step
-
 
 
 

@@ -184,9 +184,15 @@ See [workflow-modes.md](ccpm/rules/workflow-modes.md) for detailed configuration
 
 ### PRD Directory
 
-By default PRDs are stored in `.claude/prds`. You can configure a non-hidden directory (e.g., `docs/prds`) via:
+By default PRDs are stored in `docs/prds`. You can override the planning root via:
 - Environment: `CCPM_PRD_DIR=docs/prds`
 - Config file: `PRD_DIR=docs/prds` in `.claude/.ccpmrc`
+
+Nested planning storage is enabled with:
+
+```bash
+EPIC_STORAGE=nested
+```
 
 ## Workflow Phases
 
@@ -197,7 +203,7 @@ By default PRDs are stored in `.claude/prds`. You can configure a non-hidden dir
 ```
 Launches comprehensive brainstorming to create a Product Requirements Document capturing vision, user stories, success criteria, and constraints.
 
-**Output:** `.claude/prds/feature-name.md`
+**Output:** `docs/prds/feature-name/prd.md`
 
 ### 2. Implementation Planning Phase
 
@@ -206,7 +212,7 @@ Launches comprehensive brainstorming to create a Product Requirements Document c
 ```
 Transforms PRD into a technical implementation plan with architectural decisions, technical approach, and dependency mapping.
 
-**Output:** `.claude/epics/feature-name/epic.md`
+**Output:** `docs/prds/feature-name/epics/feature-name/epic.md`
 
 ### 3. Task Decomposition Phase
 
@@ -215,7 +221,7 @@ Transforms PRD into a technical implementation plan with architectural decisions
 ```
 Breaks epic into concrete, actionable tasks with acceptance criteria, effort estimates, and parallelization flags.
 
-**Output:** `.claude/epics/feature-name/[task].md`
+**Output:** `docs/prds/feature-name/epics/feature-name/issues/[task].md`
 
 ### 4. GitHub Synchronization
 

@@ -1,10 +1,15 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
 
 epic_name="$1"
 
 if [ -z "$epic_name" ]; then
   echo "❌ Please provide an epic name"
-  echo "Usage: /pm:epic-show <epic-name>"
+  echo "Usage: bash <installed_skill_dir>/references/scripts/epic-show.sh <epic-name>"
   exit 1
 fi
 
@@ -12,15 +17,15 @@ echo "Getting epic..."
 echo ""
 echo ""
 
-epic_dir=".claude/epics/$epic_name"
+epic_dir="$(ccpm_resolve_epic_dir "$epic_name" 2>/dev/null || true)"
 epic_file="$epic_dir/epic.md"
 
 if [ ! -f "$epic_file" ]; then
   echo "❌ Epic not found: $epic_name"
   echo ""
   echo "Available epics:"
-  for dir in .claude/epics/*/; do
-    [ -d "$dir" ] && echo "  • $(basename "$dir")"
+  ccpm_list_epic_dirs | while IFS= read -r dir; do
+    [ -n "$dir" ] && echo "  • $(basename "$dir")"
   done
   exit 1
 fi
@@ -49,9 +54,7 @@ task_count=0
 open_count=0
 closed_count=0
 
-for task_file in "$epic_dir"/[0-9]*.md; do
-  [ -f "$task_file" ] || continue
-
+while IFS= read -r task_file; do
   task_num=$(basename "$task_file" .md)
   task_name=$(grep "^name:" "$task_file" | head -1 | sed 's/^name: *//')
   task_status=$(grep "^status:" "$task_file" | head -1 | sed 's/^status: *//')
@@ -67,11 +70,11 @@ for task_file in "$epic_dir"/[0-9]*.md; do
   fi
 
   ((task_count++))
-done
+done < <(ccpm_list_task_files_for_epic "$epic_dir")
 
 if [ $task_count -eq 0 ]; then
   echo "  No tasks created yet"
-  echo "  Run: /pm:epic-decompose $epic_name"
+  echo "  Ask CCPM to break down the $epic_name epic"
 fi
 
 echo ""
@@ -84,8 +87,8 @@ echo "  Closed: $closed_count"
 # Next actions
 echo ""
 echo "💡 Actions:"
-[ $task_count -eq 0 ] && echo "  • Decompose into tasks: /pm:epic-decompose $epic_name"
-[ -z "$github" ] && [ $task_count -gt 0 ] && echo "  • Sync to GitHub: /pm:epic-sync $epic_name"
-[ -n "$github" ] && [ "$status" != "completed" ] && echo "  • Start work: /pm:epic-start $epic_name"
+[ $task_count -eq 0 ] && echo "  • Ask CCPM to break down the $epic_name epic"
+[ -z "$github" ] && [ $task_count -gt 0 ] && echo "  • Ask CCPM to sync the $epic_name epic to GitHub"
+[ -n "$github" ] && [ "$status" != "completed" ] && echo "  • Ask CCPM to start work on the next issue in $epic_name"
 
 exit 0

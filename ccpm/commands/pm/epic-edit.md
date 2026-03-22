@@ -1,66 +1,25 @@
 ---
-allowed-tools: Read, Write, LS
+allowed-tools: Bash, Read, Write
 ---
 
 # Epic Edit
 
-Edit epic details after creation.
+Edit the resolved epic document and sync it if needed.
 
 ## Usage
-```
+```bash
 /pm:epic-edit <epic_name>
 ```
 
 ## Instructions
 
-### 1. Read Current Epic
-
-Read `.claude/epics/$ARGUMENTS/epic.md`:
-- Parse frontmatter
-- Read content sections
-
-### 2. Interactive Edit
-
-Ask user what to edit:
-- Name/Title
-- Description/Overview
-- Architecture decisions
-- Technical approach
-- Dependencies
-- Success criteria
-
-### 3. Update Epic File
-
-Get current datetime: `date -u +"%Y-%m-%dT%H:%M:%SZ"`
-
-Update epic.md:
-- Preserve all frontmatter except `updated`
-- Apply user's edits to content
-- Update `updated` field with current datetime
-
-### 4. Option to Update GitHub
-
-If epic has GitHub URL in frontmatter:
-Ask: "Update GitHub issue? (yes/no)"
-
-If yes:
-```bash
-gh issue edit {issue_number} --body-file .claude/epics/$ARGUMENTS/epic.md
-```
-
-### 5. Output
-
-```
-✅ Updated epic: $ARGUMENTS
-  Changes made to: {sections_edited}
-  
-{If GitHub updated}: GitHub issue updated ✅
-
-View epic: /pm:epic-show $ARGUMENTS
-```
-
-## Important Notes
-
-Preserve frontmatter history (created, github URL, etc.).
-Don't change task files when editing epic.
-Follow `/rules/frontmatter-operations.md`.
+1. Resolve the epic:
+   ```bash
+   EPIC_DIR=$(.claude/scripts/pm/resolve-epic-dir.sh "$ARGUMENTS") || exit 1
+   ```
+2. Read and edit:
+   ```text
+   $EPIC_DIR/epic.md
+   ```
+3. Preserve existing frontmatter and GitHub metadata.
+4. If the epic is synced, update the GitHub issue from the resolved `epic.md`.

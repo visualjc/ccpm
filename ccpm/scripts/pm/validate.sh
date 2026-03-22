@@ -1,4 +1,9 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
 
 echo "Validating PM System..."
 echo ""
@@ -14,56 +19,70 @@ warnings=0
 # Check directory structure
 echo "📁 Directory Structure:"
 [ -d ".claude" ] && echo "  ✅ .claude directory exists" || { echo "  ❌ .claude directory missing"; ((errors++)); }
-[ -d ".claude/prds" ] && echo "  ✅ PRDs directory exists" || echo "  ⚠️ PRDs directory missing"
-[ -d ".claude/epics" ] && echo "  ✅ Epics directory exists" || echo "  ⚠️ Epics directory missing"
-[ -d ".claude/rules" ] && echo "  ✅ Rules directory exists" || echo "  ⚠️ Rules directory missing"
+PRD_DIR="$(ccpm_resolve_prd_dir --allow-missing 2>/dev/null || true)"
+[ -n "$PRD_DIR" ] && [ -d "$PRD_DIR" ] && echo "  ✅ PRD directory exists: $PRD_DIR" || echo "  ⚠️ PRD directory missing"
+[ -n "$(ccpm_list_epic_dirs)" ] && echo "  ✅ Epic directories found" || echo "  ⚠️ No epics found"
+if [ -d ".claude/rules" ] || [ -d ".cursor/ccpm/rules" ]; then
+  echo "  ✅ Rules directory exists"
+else
+  echo "  ⚠️ Rules directory missing"
+fi
 echo ""
 
 # Check for orphaned files
 echo "🗂️ Data Integrity:"
 
 # Check epics have epic.md files
-for epic_dir in .claude/epics/*/; do
-  [ -d "$epic_dir" ] || continue
+while IFS= read -r epic_dir; do
+  [ -n "$epic_dir" ] || continue
   if [ ! -f "$epic_dir/epic.md" ]; then
     echo "  ⚠️ Missing epic.md in $(basename "$epic_dir")"
     ((warnings++))
   fi
-done
+done < <(ccpm_list_epic_dirs)
+
+duplicate_epics="$(ccpm_list_epic_dirs | while IFS= read -r epic_dir; do basename "$epic_dir"; done | sort | uniq -d)"
+if [ -n "$duplicate_epics" ]; then
+  while IFS= read -r epic_name; do
+    [ -n "$epic_name" ] || continue
+    echo "  ❌ Duplicate epic name: $epic_name"
+    ((errors++))
+  done <<< "$duplicate_epics"
+fi
 
 # Check for tasks without epics
-orphaned=$(find .claude -name "[0-9]*.md" -not -path ".claude/epics/*/*" 2>/dev/null | wc -l)
+orphaned=$(
+  ccpm_list_task_files | while IFS= read -r task_file; do
+    epic_dir="$(ccpm_epic_dir_from_task_file "$task_file")"
+    [ -f "$epic_dir/epic.md" ] || printf '%s\n' "$task_file"
+  done | wc -l | tr -d '[:space:]'
+)
 [ $orphaned -gt 0 ] && echo "  ⚠️ Found $orphaned orphaned task files" && ((warnings++))
 
 # Check for broken references
 echo ""
 echo "🔗 Reference Check:"
 
-for task_file in .claude/epics/*/[0-9]*.md; do
-  [ -f "$task_file" ] || continue
+while IFS= read -r task_file; do
+  [ -n "$task_file" ] || continue
 
-  # Extract dependencies from task file
   deps_line=$(grep "^depends_on:" "$task_file" | head -1)
   if [ -n "$deps_line" ]; then
-    deps=$(echo "$deps_line" | sed 's/^depends_on: *//')
-    deps=$(echo "$deps" | sed 's/^\[//' | sed 's/\]$//')
-    deps=$(echo "$deps" | sed 's/,/ /g')
-    # Trim whitespace and handle empty cases
-    deps=$(echo "$deps" | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
+    deps=$(echo "$deps_line" | sed 's/^depends_on: *//' | sed 's/^\[//' | sed 's/\]$//' | sed 's/,/ /g' | sed 's/^[[:space:]]*//' | sed 's/[[:space:]]*$//')
     [ -z "$deps" ] && deps=""
   else
     deps=""
   fi
   if [ -n "$deps" ] && [ "$deps" != "depends_on:" ]; then
-    epic_dir=$(dirname "$task_file")
+    epic_dir="$(ccpm_epic_dir_from_task_file "$task_file")"
     for dep in $deps; do
-      if [ ! -f "$epic_dir/$dep.md" ]; then
+      if ! ccpm_task_file_for_epic_issue "$epic_dir" "$dep" >/dev/null 2>&1; then
         echo "  ⚠️ Task $(basename "$task_file" .md) references missing task: $dep"
         ((warnings++))
       fi
     done
   fi
-done
+done < <(ccpm_list_task_files)
 
 if [ $warnings -eq 0 ] && [ $errors -eq 0 ]; then
   echo "  ✅ All references valid"
@@ -74,7 +93,7 @@ echo ""
 echo "📝 Frontmatter Validation:"
 invalid=0
 
-for file in $(find .claude -name "*.md" -path "*/epics/*" -o -path "*/prds/*" 2>/dev/null); do
+for file in $( { ccpm_list_prd_files; ccpm_list_epic_dirs | while IFS= read -r dir; do printf '%s\n' "$dir/epic.md"; done; ccpm_list_task_files; } ); do
   if ! grep -q "^---" "$file"; then
     echo "  ⚠️ Missing frontmatter: $(basename "$file")"
     ((invalid++))
@@ -95,7 +114,7 @@ if [ $errors -eq 0 ] && [ $warnings -eq 0 ] && [ $invalid -eq 0 ]; then
   echo "✅ System is healthy!"
 else
   echo ""
-  echo "💡 Run /pm:clean to fix some issues automatically"
+  echo "💡 Ask CCPM to clean up archived or completed work if needed"
 fi
 
 exit 0
