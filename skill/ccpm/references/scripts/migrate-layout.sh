@@ -86,30 +86,95 @@ move_dir_children_safe() {
   cleanup_if_empty "$src_dir"
 }
 
+next_legacy_epic_archive_dir() {
+  local legacy_root archive_kind epic_name archive_base archive_dir suffix
+  legacy_root="$1"
+  archive_kind="$2"
+  epic_name="$3"
+  archive_base="$legacy_root/.archived/$archive_kind/$epic_name"
+  archive_dir="$archive_base"
+  suffix=2
+
+  while [ -e "$archive_dir" ]; do
+    archive_dir="${archive_base}-${suffix}"
+    suffix=$((suffix + 1))
+  done
+
+  printf '%s\n' "$archive_dir"
+}
+
 quarantine_legacy_epic_conflict() {
-  local src_dir legacy_root epic_name conflict_path archive_dir
+  local src_dir legacy_root archive_kind message active_path detail archive_dir
   src_dir="$1"
   legacy_root="$2"
-  epic_name="$3"
-  conflict_path="$4"
-  archive_dir="$legacy_root/.archived/duplicate-name-conflicts/$epic_name"
-
-  if [ "$src_dir" = "$archive_dir" ]; then
-    printf 'SKIP duplicate epic quarantine already active: %s (active epic at %s)\n' "$epic_name" "$conflict_path"
-    return 0
-  fi
-
-  if [ -e "$archive_dir" ]; then
-    printf 'SKIP duplicate epic quarantine conflict: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
-    return 0
-  fi
+  archive_kind="$3"
+  message="$4"
+  active_path="$5"
+  detail="${6:-}"
+  archive_dir="$(next_legacy_epic_archive_dir "$legacy_root" "$archive_kind" "$(basename "$src_dir")")"
 
   if $APPLY; then
     mkdir -p "$(dirname "$archive_dir")"
     mv "$src_dir" "$archive_dir"
-    printf 'QUARANTINED duplicate epic: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
+    printf 'QUARANTINED %s: %s -> %s (active epic at %s' "$message" "$src_dir" "$archive_dir" "$active_path"
   else
-    printf 'WOULD QUARANTINE duplicate epic: %s -> %s (active epic at %s)\n' "$src_dir" "$archive_dir" "$conflict_path"
+    printf 'WOULD QUARANTINE %s: %s -> %s (active epic at %s' "$message" "$src_dir" "$archive_dir" "$active_path"
+  fi
+
+  if [ -n "$detail" ]; then
+    printf '; conflicting path %s' "$detail"
+  fi
+  printf ')\n'
+}
+
+dest_conflicts_with_src() {
+  local src dest
+  src="$1"
+  dest="$2"
+
+  [ -e "$dest" ] || return 1
+  [ -f "$dest" ] && cmp -s "$src" "$dest" && return 1
+  return 0
+}
+
+same_target_merge_conflict_path() {
+  local epic_dir target_epic_dir child name update_file relative_path target_path
+  epic_dir="$1"
+  target_epic_dir="$2"
+
+  while IFS= read -r -d '' child; do
+    name="$(basename "$child")"
+    case "$name" in
+      epic.md|github-mapping.md|execution-status.md)
+        target_path="$target_epic_dir/$name"
+        ;;
+      [0-9]*-analysis.md)
+        target_path="$target_epic_dir/$name"
+        ;;
+      *.md)
+        ccpm_is_numeric_task_filename "$name" || continue
+        target_path="$target_epic_dir/issues/$name"
+        ;;
+      *)
+        continue
+        ;;
+    esac
+
+    if dest_conflicts_with_src "$child" "$target_path"; then
+      printf '%s\n' "$target_path"
+      return 0
+    fi
+  done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
+
+  if [ -d "$epic_dir/updates" ]; then
+    while IFS= read -r -d '' update_file; do
+      relative_path="${update_file#$epic_dir/updates/}"
+      target_path="$target_epic_dir/updates/$relative_path"
+      if dest_conflicts_with_src "$update_file" "$target_path"; then
+        printf '%s\n' "$target_path"
+        return 0
+      fi
+    done < <(find "$epic_dir/updates" -type f -print0 2>/dev/null | sort -z)
   fi
 }
 
@@ -236,7 +301,16 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
     target_epic_dir="$PRD_DIR/$prd_name/epics/$epic_name"
     conflict_path="$(epic_name_conflict_exists "$epic_name" "$epic_dir" || true)"
     if [ -n "$conflict_path" ] && [ "$conflict_path" != "$target_epic_dir" ]; then
-      quarantine_legacy_epic_conflict "$epic_dir" "$legacy_epic_root" "$epic_name" "$conflict_path"
+      quarantine_legacy_epic_conflict "$epic_dir" "$legacy_epic_root" "duplicate-name-conflicts" "duplicate epic name" "$conflict_path"
+      continue
+    fi
+
+    same_target_conflict_path=""
+    if [ -d "$target_epic_dir" ]; then
+      same_target_conflict_path="$(same_target_merge_conflict_path "$epic_dir" "$target_epic_dir" || true)"
+    fi
+    if [ -n "$same_target_conflict_path" ]; then
+      quarantine_legacy_epic_conflict "$epic_dir" "$legacy_epic_root" "merge-conflicts" "same-target merge conflict" "$target_epic_dir" "$same_target_conflict_path"
       continue
     fi
 
@@ -263,7 +337,7 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
     done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null | sort -z)
 
     cleanup_if_empty "$epic_dir"
-  done < <(find "$legacy_epic_root" -mindepth 1 -maxdepth 1 -type d ! -name archived -print0 2>/dev/null | sort -z)
+  done < <(find "$legacy_epic_root" -mindepth 1 -maxdepth 1 -type d ! -name archived ! -name .archived -print0 2>/dev/null | sort -z)
 done
 
 if ! $APPLY; then
