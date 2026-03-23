@@ -1,4 +1,10 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
+
 echo "Getting status..."
 echo ""
 echo ""
@@ -10,13 +16,11 @@ echo ""
 # Find tasks that are open and have no dependencies or whose dependencies are closed
 found=0
 
-for epic_dir in .claude/epics/*/; do
-  [ -d "$epic_dir" ] || continue
+while IFS= read -r epic_dir; do
+  [ -n "$epic_dir" ] || continue
   epic_name=$(basename "$epic_dir")
 
-  for task_file in "$epic_dir"/[0-9]*.md; do
-    [ -f "$task_file" ] || continue
-
+  while IFS= read -r task_file; do
     # Check if task is open
     status=$(grep "^status:" "$task_file" | head -1 | sed 's/^status: *//')
     if [ "$status" != "open" ] && [ -n "$status" ]; then
@@ -32,8 +36,23 @@ for epic_dir in .claude/epics/*/; do
       deps=""
     fi
 
-    # If no dependencies or empty, task is available
-    if [ -z "$deps" ] || [ "$deps" = "depends_on:" ]; then
+    ready=true
+    if [ -n "$deps" ] && [ "$deps" != "depends_on:" ]; then
+      for dep in $(echo "$deps" | sed 's/,/ /g'); do
+        dep_file="$(ccpm_task_file_for_epic_issue "$epic_dir" "$dep" 2>/dev/null || true)"
+        if [ ! -f "$dep_file" ]; then
+          ready=false
+          break
+        fi
+        dep_status=$(grep "^status:" "$dep_file" | head -1 | sed 's/^status: *//')
+        if [ "$dep_status" != "closed" ] && [ "$dep_status" != "completed" ]; then
+          ready=false
+          break
+        fi
+      done
+    fi
+
+    if $ready; then
       task_name=$(grep "^name:" "$task_file" | head -1 | sed 's/^name: *//')
       task_num=$(basename "$task_file" .md)
       parallel=$(grep "^parallel:" "$task_file" | head -1 | sed 's/^parallel: *//')
@@ -44,8 +63,8 @@ for epic_dir in .claude/epics/*/; do
       echo ""
       ((found++))
     fi
-  done
-done
+  done < <(ccpm_list_task_files_for_epic "$epic_dir")
+done < <(ccpm_list_epic_dirs)
 
 if [ $found -eq 0 ]; then
   echo "No available tasks found."

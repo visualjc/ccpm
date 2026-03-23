@@ -1,4 +1,9 @@
 #!/bin/bash
+set -uo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+# shellcheck disable=SC1091
+. "$SCRIPT_DIR/layout-common.sh"
 
 echo "Getting status..."
 echo ""
@@ -10,8 +15,8 @@ echo "================"
 echo ""
 
 echo "📄 PRDs:"
-if [ -d ".claude/prds" ]; then
-  total=$(ls .claude/prds/*.md 2>/dev/null | wc -l)
+if [ -n "$(ccpm_list_prd_files)" ]; then
+  total=$(ccpm_list_prd_files | wc -l | tr -d '[:space:]')
   echo "  Total: $total"
 else
   echo "  No PRDs found"
@@ -19,8 +24,8 @@ fi
 
 echo ""
 echo "📚 Epics:"
-if [ -d ".claude/epics" ]; then
-  total=$(ls -d .claude/epics/*/ 2>/dev/null | grep -v '/archived/$' | wc -l)
+if [ -n "$(ccpm_list_epic_dirs)" ]; then
+  total=$(ccpm_list_epic_dirs | wc -l | tr -d '[:space:]')
   echo "  Total: $total"
 else
   echo "  No epics found"
@@ -28,10 +33,10 @@ fi
 
 echo ""
 echo "📝 Tasks:"
-if [ -d ".claude/epics" ]; then
-  total=$(find .claude/epics -path "*/archived/*" -prune -o -name "[0-9]*.md" -print 2>/dev/null | wc -l)
-  open=$(find .claude/epics -path "*/archived/*" -prune -o -name "[0-9]*.md" -print 2>/dev/null | xargs grep -l "^status: *open" 2>/dev/null | wc -l)
-  closed=$(find .claude/epics -path "*/archived/*" -prune -o -name "[0-9]*.md" -print 2>/dev/null | xargs grep -l "^status: *closed" 2>/dev/null | wc -l)
+if [ -n "$(ccpm_list_task_files)" ]; then
+  total=$(ccpm_list_task_files | wc -l | tr -d '[:space:]')
+  open=$(ccpm_list_task_files | xargs grep -l "^status: *open" 2>/dev/null | wc -l | tr -d '[:space:]')
+  closed=$(ccpm_list_task_files | xargs grep -l "^status: *closed" 2>/dev/null | wc -l | tr -d '[:space:]')
   echo "  Open: $open"
   echo "  Closed: $closed"
   echo "  Total: $total"

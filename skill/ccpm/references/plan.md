@@ -1,6 +1,6 @@
 # Plan — Capture Requirements
 
-This phase turns an idea into a structured PRD, then converts the PRD into a technical epic ready for decomposition.
+This phase turns an idea into a structured PRD, then converts the PRD into one or more technical epics ready for decomposition.
 
 ---
 
@@ -9,9 +9,10 @@ This phase turns an idea into a structured PRD, then converts the PRD into a tec
 **Trigger**: User wants to plan a new feature, product requirement, or area of work.
 
 ### Preflight
-- Check if `.claude/prds/<name>.md` already exists — if so, confirm overwrite before proceeding.
-- Ensure `.claude/prds/` directory exists; create it if not.
-- Feature name must be kebab-case (lowercase, letters/numbers/hyphens, starts with a letter). If not: "❌ Feature name must be kebab-case. Example: user-auth, payment-v2"
+- Resolve the planning root with `bash references/scripts/resolve-prd-dir.sh --ensure`.
+- Use `<PRD_DIR>/<name>/prd.md` as the canonical PRD path.
+- If `<PRD_DIR>/<name>/prd.md` or legacy `<PRD_DIR>/<name>.md` already exists, confirm overwrite before proceeding.
+- Feature name must be kebab-case.
 
 ### Process
 
@@ -22,7 +23,7 @@ Conduct a genuine brainstorming session before writing anything. Ask the user:
 - What's explicitly out of scope?
 - What are the constraints (tech, time, resources)?
 
-Then write `.claude/prds/<name>.md` with this frontmatter and structure:
+Then write `<PRD_DIR>/<name>/prd.md` with:
 
 ```markdown
 ---
@@ -45,13 +46,7 @@ created: <run: date -u +"%Y-%m-%dT%H:%M:%SZ">
 ## Dependencies
 ```
 
-**Quality gates before saving:**
-- No placeholder text in any section
-- User stories include acceptance criteria
-- Success criteria are measurable
-- Out of scope is explicitly listed
-
-**After creation**: Confirm "✅ PRD created: `.claude/prds/<name>.md`" and suggest: "Ready to create technical epic? Say: parse the <name> PRD"
+**After creation**: Confirm the resolved PRD path and suggest parsing it into an epic.
 
 ---
 
@@ -60,24 +55,29 @@ created: <run: date -u +"%Y-%m-%dT%H:%M:%SZ">
 **Trigger**: User wants to convert an existing PRD into a technical implementation plan.
 
 ### Preflight
-- Verify `.claude/prds/<name>.md` exists with valid frontmatter (name, description, status, created).
-- Check if `.claude/epics/<name>/epic.md` already exists — confirm overwrite if so.
+- Resolve the PRD with `bash references/scripts/resolve-prd-path.sh <prd-name>`.
+- Determine the epic name:
+  - default: same as the PRD name
+  - if the user clearly requests a named epic, use that epic name instead
+- Resolve the epic directory with `bash references/scripts/resolve-epic-dir.sh --ensure <prd-name> <epic-name>`.
+- If `epic.md` already exists there, confirm overwrite before proceeding.
 
 ### Process
 
-Read the PRD fully, then produce `.claude/epics/<name>/epic.md`:
+Read the PRD fully, then produce `<epic-dir>/epic.md`:
 
 ```markdown
 ---
-name: <feature-name>
+name: <epic-name>
 status: backlog
 created: <run: date -u +"%Y-%m-%dT%H:%M:%SZ">
+updated: <same as created>
 progress: 0%
-prd: .claude/prds/<name>.md
+prd: <resolved prd path>
 github: (will be set on sync)
 ---
 
-# Epic: <feature-name>
+# Epic: <epic-name>
 
 ## Overview
 ## Architecture Decisions
@@ -93,14 +93,14 @@ github: (will be set on sync)
 ```
 
 **Key constraints:**
-- Aim for ≤10 tasks total — prefer simplicity over completeness.
-- Look for ways to leverage existing functionality before creating new code.
-- Identify parallelization opportunities in the task breakdown preview.
+- Aim for ≤10 tasks total.
+- Prefer existing functionality over new surface area.
+- Identify parallelization opportunities.
 
-**After creation**: Confirm "✅ Epic created: `.claude/epics/<name>/epic.md`" and suggest: "Ready to decompose into tasks? Say: decompose the <name> epic"
+**After creation**: Confirm the resolved epic path and suggest decomposition.
 
 ---
 
 ## Editing a PRD or Epic
 
-Read the file first, make targeted edits preserving all frontmatter. Update the `updated` frontmatter field with current datetime.
+Read the resolved file first. Make targeted edits while preserving frontmatter and update `updated:` with the current datetime.

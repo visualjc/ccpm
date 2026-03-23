@@ -4,72 +4,91 @@ Read this before doing any file operations across all phases.
 
 ---
 
-## Directory Structure
+## Planning Storage
 
+Use resolver scripts instead of hardcoded planning paths:
+
+```bash
+PRD_DIR=$(bash references/scripts/resolve-prd-dir.sh)
+PRD_PATH=$(bash references/scripts/resolve-prd-path.sh <prd-name>)
+EPIC_DIR=$(bash references/scripts/resolve-epic-dir.sh <epic-name>)
+ISSUE_FILE=$(bash references/scripts/resolve-issue-file.sh <issue-number>)
 ```
-.claude/
-├── prds/
-│   └── <feature-name>.md          # Product requirement documents
-├── epics/
-│   ├── <feature-name>/
-│   │   ├── epic.md                # Technical epic
-│   │   ├── <N>.md                 # Task files (named by GitHub issue number after sync)
-│   │   ├── <N>-analysis.md        # Parallel work stream analysis
-│   │   ├── github-mapping.md      # Issue number → URL mapping
-│   │   ├── execution-status.md    # Active agents tracker
-│   │   └── updates/
-│   │       └── <issue_N>/
-│   │           ├── stream-A.md    # Per-agent progress
-│   │           ├── progress.md    # Overall issue progress
-│   │           └── execution.md  # Execution state
-│   └── archived/
-│       └── <feature-name>/        # Completed epics
-├── context/                       # Project context docs
-└── testing-config.md              # Test runner configuration for this repo
+
+For new repos, planning artifacts live under `docs/prds/` by default. `.claude/` remains for config, context, and testing.
+
+### Canonical Layout
+
+```text
+<PRD_DIR>/
+└── <prd-name>/
+    ├── prd.md
+    └── epics/
+        ├── <epic-name>/
+        │   ├── epic.md
+        │   ├── issues/
+        │   │   └── <N>.md
+        │   ├── <N>-analysis.md
+        │   ├── github-mapping.md
+        │   ├── execution-status.md
+        │   └── updates/
+        │       └── <issue_N>/
+        │           ├── stream-A.md
+        │           ├── progress.md
+        │           └── execution.md
+        └── .archived/
+            └── <epic-name>/
 ```
+
+### Compatibility Rules
+
+- Prefer `<PRD_DIR>/<name>/prd.md` over flat `<PRD_DIR>/<name>.md`.
+- Prefer `<PRD_DIR>/<prd>/epics/<epic>/` over `.claude/epics/<epic>/`.
+- Prefer `<epic>/issues/<N>.md` over `<epic>/<N>.md`.
+- Preserve backward compatibility for reading until the repo is explicitly migrated.
 
 ---
 
 ## Frontmatter Schemas
 
-### PRD (.claude/prds/<name>.md)
-```yaml
----
-name: <feature-name>        # kebab-case, matches filename
-description: <one-liner>    # used in lists and summaries
-status: backlog | active | completed
-created: <ISO 8601>         # date -u +"%Y-%m-%dT%H:%M:%SZ"
----
-```
-
-### Epic (.claude/epics/<name>/epic.md)
+### PRD (`<PRD_DIR>/<name>/prd.md`)
 ```yaml
 ---
 name: <feature-name>
-status: backlog | in-progress | completed
+description: <one-liner>
+status: backlog | active | completed
 created: <ISO 8601>
-updated: <ISO 8601>
-progress: 0%                # recalculated when tasks close
-prd: .claude/prds/<name>.md
-github: https://github.com/<owner>/<repo>/issues/<N>  # set on sync
 ---
 ```
 
-### Task (.claude/epics/<name>/<N>.md)
+### Epic (`<PRD_DIR>/<prd>/epics/<epic>/epic.md`)
+```yaml
+---
+name: <epic-name>
+status: backlog | in-progress | completed
+created: <ISO 8601>
+updated: <ISO 8601>
+progress: 0%
+prd: <PRD_DIR>/<prd>/prd.md
+github: https://github.com/<owner>/<repo>/issues/<N>
+---
+```
+
+### Task (`<epic>/issues/<N>.md`)
 ```yaml
 ---
 name: <Task Title>
 status: open | in-progress | closed
 created: <ISO 8601>
 updated: <ISO 8601>
-github: https://github.com/<owner>/<repo>/issues/<N>  # set on sync
-depends_on: []              # issue numbers this must wait for
-parallel: true              # can run concurrently with non-conflicting tasks
-conflicts_with: []          # issue numbers that touch the same files
+github: https://github.com/<owner>/<repo>/issues/<N>
+depends_on: []
+parallel: true
+conflicts_with: []
 ---
 ```
 
-### Progress (.claude/epics/<name>/updates/<N>/progress.md)
+### Progress (`<epic>/updates/<N>/progress.md`)
 ```yaml
 ---
 issue: <N>
@@ -79,7 +98,7 @@ completion: 0%
 ---
 ```
 
-### Testing Config (.claude/testing-config.md)
+### Testing Config (`.claude/testing-config.md`)
 ```yaml
 ---
 framework: <name>
@@ -90,37 +109,21 @@ last_updated: <ISO 8601>
 ---
 ```
 
-Contains the detected test setup for the current project. Additional fields such as `options` and `environment` may be added below the frontmatter as structured markdown.
-
 ---
 
 ## Datetime Rule
 
-Always get real current datetime from the system — never use placeholder text:
+Always get real current datetime from the system:
+
 ```bash
 date -u +"%Y-%m-%dT%H:%M:%SZ"
 ```
 
 ---
 
-## Frontmatter Update Pattern
-
-When updating a single frontmatter field in an existing file:
-```bash
-sed -i.bak "/^<field>:/c\\<field>: <value>" <file>
-rm <file>.bak
-```
-
-When stripping frontmatter to get body content for GitHub:
-```bash
-sed '1,/^---$/d; 1,/^---$/d' <file> > /tmp/body.md
-```
-
----
-
 ## GitHub Operations
 
-### Repository Safety Check (run before any write operation)
+### Repository Safety Check
 ```bash
 remote_url=$(git remote get-url origin 2>/dev/null || echo "")
 if [[ "$remote_url" == *"automazeio/ccpm"* ]] || [[ "$remote_url" == *"visualjc/ccpm"* ]]; then
@@ -132,15 +135,10 @@ REPO=$(echo "$remote_url" | sed 's|.*github.com[:/]||' | sed 's|\.git$||')
 ```
 
 ### Authentication
-Don't pre-check authentication. Run the `gh` command and handle failure:
+Run the `gh` command directly and handle failure:
+
 ```bash
 gh <command> || echo "❌ GitHub CLI failed. Run: gh auth login"
-```
-
-### Getting Issue Numbers
-```bash
-# From a task file's github field:
-grep 'github:' <file> | grep -oE '[0-9]+$'
 ```
 
 ---
@@ -148,31 +146,27 @@ grep 'github:' <file> | grep -oE '[0-9]+$'
 ## Git / Worktree Conventions
 
 - One branch per epic: `epic/<name>`
-- Worktrees live at `../epic-<name>/` (sibling to project root)
-- Always start branches from an up-to-date main:
-  ```bash
-  git checkout main && git pull origin main
-  git worktree add ../epic-<name> -b epic/<name>
-  ```
+- Worktrees live at `../epic-<name>/`
 - Commit format inside epics: `Issue #<N>: <description>`
-- Never use `--force` in any git operation
+- Never use `--force` in git operations
 
 ---
 
 ## Naming Conventions
 
-- Feature names: kebab-case, lowercase, letters/numbers/hyphens, starts with a letter
-- Task files before sync: `001.md`, `002.md`, ... (sequential)
-- Task files after sync: renamed to GitHub issue number (e.g., `1234.md`)
-- Labels applied on sync: `epic`, `epic:<name>`, `feature` (for epics); `task`, `epic:<name>` (for tasks)
+- PRD names: kebab-case and unique within the project
+- Epic names: kebab-case and unique across the project
+- Task files before sync: `001.md`, `002.md`, ...
+- Task files after sync: renamed to GitHub issue numbers
+- Archived epics move to `<PRD_DIR>/<prd>/epics/.archived/<epic>/`
 
 ---
 
 ## Epic Progress Calculation
 
 ```bash
-total=$(ls .claude/epics/<name>/[0-9]*.md 2>/dev/null | wc -l)
-closed=$(grep -l '^status: closed' .claude/epics/<name>/[0-9]*.md 2>/dev/null | wc -l)
+total=$(find <epic>/issues -mindepth 1 -maxdepth 1 -name '[0-9]*.md' | wc -l)
+closed=$(grep -l '^status: closed' <epic>/issues/[0-9]*.md 2>/dev/null | wc -l)
 progress=$((closed * 100 / total))
 ```
 
