@@ -92,8 +92,14 @@ check_sync_content() {
     echo -e "\n📋 Check 4: Validating sync content path formats..."
     total_checks=$((total_checks + 1))
     
-    # Check update files for proper path formats
-    update_files=$(find .claude/epics/*/updates/ -name "*.md" 2>/dev/null | head -10)
+    # Check update files for proper path formats in nested or legacy layouts
+    update_files=$(
+        {
+            find docs/prds -path "*/updates/*.md" 2>/dev/null || true
+            find .claude/epics -path "*/updates/*.md" 2>/dev/null || true
+            find .cursor/ccpm/epics -path "*/updates/*.md" 2>/dev/null || true
+        } | head -10
+    )
     
     if [ -z "$update_files" ]; then
         print_warning "No update files found, skipping this check"

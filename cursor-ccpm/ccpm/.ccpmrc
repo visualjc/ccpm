@@ -3,4 +3,5 @@
 
 PARALLEL_MODE=false
 WORKTREE_MODE=false
-PRD_DIR=.cursor/ccpm/prds
+PRD_DIR=docs/prds
+EPIC_STORAGE=nested

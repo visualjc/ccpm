@@ -11,11 +11,11 @@ Edit an existing Product Requirements Document.
 
 ### 1. Read Current PRD
 
-Resolve PRD path and read `$PRD_DIR/$ARGUMENTS.md`:
+Resolve the canonical PRD path:
 ```bash
-PRD_DIR=$(.cursor/ccpm/scripts/pm/resolve-prd-dir.sh) || { echo "❌ No PRD directory. Run /pm:prd-new $ARGUMENTS first"; exit 1; }
+PRD_PATH=$(.cursor/ccpm/scripts/pm/resolve-prd-path.sh "$ARGUMENTS") || { echo "❌ PRD not found. Run /pm:prd-new $ARGUMENTS first"; exit 1; }
 ```
-Read `$PRD_DIR/$ARGUMENTS.md`:
+Read `"$PRD_PATH"`:
 - Parse frontmatter
 - Read all sections
 
