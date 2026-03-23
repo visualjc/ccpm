@@ -67,10 +67,16 @@ move_file_safe() {
 }
 
 move_dir_children_safe() {
-  local src_dir dest_dir child dest_child
+  local src_dir dest_dir child dest_child first_child
   src_dir="$1"
   dest_dir="$2"
   [ -d "$src_dir" ] || return 0
+
+  first_child="$(find "$src_dir" -mindepth 1 -maxdepth 1 -print -quit 2>/dev/null || true)"
+  if [ -z "$first_child" ]; then
+    cleanup_if_empty "$src_dir"
+    return 0
+  fi
 
   ensure_dir "$dest_dir"
 
@@ -137,29 +143,119 @@ dest_conflicts_with_src() {
   return 0
 }
 
+path_shape_conflict_path() {
+  local dest root current relative remainder
+  dest="$1"
+  root="$2"
+
+  current="$(dirname "$dest")"
+  relative="${current#"$root"}"
+  relative="${relative#/}"
+
+  if [ -n "$relative" ]; then
+    remainder="$root"
+    IFS='/' read -r -a _ccpm_segments <<< "$relative"
+    for _ccpm_segment in "${_ccpm_segments[@]}"; do
+      remainder="$remainder/$_ccpm_segment"
+      if [ -e "$remainder" ] && [ ! -d "$remainder" ]; then
+        printf '%s\n' "$remainder"
+        unset _ccpm_segments _ccpm_segment
+        return 0
+      fi
+    done
+    unset _ccpm_segments _ccpm_segment
+  fi
+
+  if [ -e "$dest" ] && [ ! -f "$dest" ]; then
+    printf '%s\n' "$dest"
+    return 0
+  fi
+
+  return 1
+}
+
+mapped_destination_for_legacy_child() {
+  local child target_epic_dir name relative_path
+  child="$1"
+  target_epic_dir="$2"
+  name="$(basename "$child")"
+
+  case "$name" in
+    epic.md|github-mapping.md|execution-status.md)
+      printf '%s\n' "$target_epic_dir/$name"
+      ;;
+    [0-9]*-analysis.md)
+      printf '%s\n' "$target_epic_dir/$name"
+      ;;
+    *.md)
+      ccpm_is_numeric_task_filename "$name" || return 1
+      printf '%s\n' "$target_epic_dir/issues/$name"
+      ;;
+    updates)
+      return 1
+      ;;
+    *)
+      return 1
+      ;;
+  esac
+}
+
+unsupported_legacy_epic_entry() {
+  local epic_dir entry name
+  epic_dir="$1"
+
+  while IFS= read -r -d '' entry; do
+    name="$(basename "$entry")"
+    if [ -d "$entry" ]; then
+      [ "$name" = "updates" ] && continue
+      printf '%s\n' "$entry"
+      return 0
+    fi
+
+    case "$name" in
+      epic.md|github-mapping.md|execution-status.md|[0-9]*-analysis.md)
+        continue
+        ;;
+      *.md)
+        ccpm_is_numeric_task_filename "$name" && continue
+        printf '%s\n' "$entry"
+        return 0
+        ;;
+      *)
+        printf '%s\n' "$entry"
+        return 0
+        ;;
+    esac
+  done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -print0 2>/dev/null | sort -z)
+
+  return 1
+}
+
 same_target_merge_conflict_path() {
-  local epic_dir target_epic_dir child name update_file relative_path target_path
+  local epic_dir target_epic_dir child update_entry relative_path target_path unsupported_path shape_conflict
   epic_dir="$1"
   target_epic_dir="$2"
 
-  while IFS= read -r -d '' child; do
-    name="$(basename "$child")"
-    case "$name" in
-      epic.md|github-mapping.md|execution-status.md)
-        target_path="$target_epic_dir/$name"
-        ;;
-      [0-9]*-analysis.md)
-        target_path="$target_epic_dir/$name"
-        ;;
-      *.md)
-        ccpm_is_numeric_task_filename "$name" || continue
-        target_path="$target_epic_dir/issues/$name"
-        ;;
-      *)
-        continue
-        ;;
-    esac
+  unsupported_path="$(unsupported_legacy_epic_entry "$epic_dir" || true)"
+  if [ -n "$unsupported_path" ]; then
+    printf '%s\n' "$unsupported_path"
+    return 0
+  fi
 
+  if [ -f "$epic_dir/epic.md" ] && path_shape_conflict_path "$target_epic_dir/issues" "$target_epic_dir" >/dev/null; then
+    path_shape_conflict_path "$target_epic_dir/issues" "$target_epic_dir"
+    return 0
+  fi
+
+  while IFS= read -r -d '' child; do
+    target_path="$(mapped_destination_for_legacy_child "$child" "$target_epic_dir" || true)"
+    [ -n "$target_path" ] || continue
+
+    shape_conflict="$(path_shape_conflict_path "$target_path" "$target_epic_dir" || true)"
+    if [ -n "$shape_conflict" ]; then
+      printf '%s\n' "$shape_conflict"
+      return 0
+    fi
     if dest_conflicts_with_src "$child" "$target_path"; then
       printf '%s\n' "$target_path"
       return 0
@@ -167,14 +263,25 @@ same_target_merge_conflict_path() {
   done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
 
   if [ -d "$epic_dir/updates" ]; then
-    while IFS= read -r -d '' update_file; do
-      relative_path="${update_file#$epic_dir/updates/}"
+    shape_conflict="$(path_shape_conflict_path "$target_epic_dir/updates" "$target_epic_dir" || true)"
+    if [ -n "$shape_conflict" ]; then
+      printf '%s\n' "$shape_conflict"
+      return 0
+    fi
+
+    while IFS= read -r -d '' update_entry; do
+      relative_path="${update_entry#$epic_dir/updates/}"
       target_path="$target_epic_dir/updates/$relative_path"
-      if dest_conflicts_with_src "$update_file" "$target_path"; then
+      shape_conflict="$(path_shape_conflict_path "$target_path" "$target_epic_dir" || true)"
+      if [ -n "$shape_conflict" ]; then
+        printf '%s\n' "$shape_conflict"
+        return 0
+      fi
+      if dest_conflicts_with_src "$update_entry" "$target_path"; then
         printf '%s\n' "$target_path"
         return 0
       fi
-    done < <(find "$epic_dir/updates" -type f -print0 2>/dev/null | sort -z)
+    done < <(find "$epic_dir/updates" -mindepth 1 -print0 2>/dev/null | sort -z)
   fi
 }
 
@@ -196,13 +303,23 @@ epic_name_conflict_exists() {
 }
 
 normalize_nested_epic_dirs() {
-  local epic_dir child name
+  local epic_dir child name issue_conflict
 
   [ -d "$PRD_DIR" ] || return 0
 
   while IFS= read -r -d '' epic_dir; do
     [ -f "$epic_dir/epic.md" ] || continue
-    ensure_dir "$epic_dir/issues"
+
+    issue_conflict=""
+    while IFS= read -r -d '' child; do
+      name="$(basename "$child")"
+      ccpm_is_numeric_task_filename "$name" || continue
+      issue_conflict="$(path_shape_conflict_path "$epic_dir/issues/$name" "$epic_dir" || true)"
+      if [ -n "$issue_conflict" ]; then
+        printf 'ERROR nested normalization conflict: %s requires directory-compatible path for %s\n' "$epic_dir" "$issue_conflict" >&2
+        return 1
+      fi
+    done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
 
     while IFS= read -r -d '' child; do
       name="$(basename "$child")"
@@ -213,6 +330,7 @@ normalize_nested_epic_dirs() {
           ;;
         *.md)
           ccpm_is_numeric_task_filename "$name" || continue
+          ensure_dir "$epic_dir/issues"
           move_file_safe "$child" "$epic_dir/issues/$name"
           ;;
       esac
@@ -315,7 +433,6 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
     fi
 
     ensure_dir "$target_epic_dir"
-    ensure_dir "$target_epic_dir/issues"
 
     while IFS= read -r -d '' child; do
       name="$(basename "$child")"
@@ -331,6 +448,7 @@ for legacy_epic_root in ".claude/epics" ".cursor/ccpm/epics"; do
           ;;
         *.md)
           ccpm_is_numeric_task_filename "$name" || continue
+          ensure_dir "$target_epic_dir/issues"
           move_file_safe "$child" "$target_epic_dir/issues/$name"
           ;;
       esac
