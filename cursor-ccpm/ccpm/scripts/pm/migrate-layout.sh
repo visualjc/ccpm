@@ -245,6 +245,23 @@ top_level_numeric_task_files() {
   done < <(find "$epic_dir" -mindepth 1 -maxdepth 1 -type f -name '*.md' -print0 2>/dev/null | sort -z)
 }
 
+planned_target_dir_conflict() {
+  local target_dir current conflict_path
+  target_dir="$1"
+  current="$target_dir"
+
+  while [ "$current" != "." ] && [ "$current" != "/" ]; do
+    conflict_path="$(required_dir_conflict "$current" || true)"
+    if [ -n "$conflict_path" ]; then
+      printf '%s\n' "$conflict_path"
+      return 0
+    fi
+    current="$(dirname "$current")"
+  done
+
+  return 1
+}
+
 same_target_merge_conflict_path() {
   local epic_dir target_epic_dir child update_dir update_file relative_path target_path conflict_path first_child
   epic_dir="$1"
@@ -308,6 +325,13 @@ classify_legacy_epic_migration() {
   conflict_path="$(epic_name_conflict_exists "$epic_name" "$epic_dir" || true)"
   if [ -n "$conflict_path" ] && [ "$conflict_path" != "$target_epic_dir" ]; then
     MIGRATION_CLASSIFICATION="quarantine-duplicate-name"
+    MIGRATION_DETAIL="$conflict_path"
+    return 0
+  fi
+
+  conflict_path="$(planned_target_dir_conflict "$target_epic_dir" || true)"
+  if [ -n "$conflict_path" ]; then
+    MIGRATION_CLASSIFICATION="quarantine-same-target-conflict"
     MIGRATION_DETAIL="$conflict_path"
     return 0
   fi
